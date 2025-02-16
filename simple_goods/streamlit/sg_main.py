@@ -19,77 +19,117 @@ client_table = sg_lib.get_client_table(data)
 # ----------------- Основной блок ---------------------          
 mainblok = st.container()
 with mainblok:
+    prbar = st.progress(0, text='Начинаю вычисления ...')    
     st.subheader('Основные показатели')
 
     allusers = data['user_id'].nunique()
     alltr = data['tr_id'].nunique()
     allsum = data['oper_sum'].sum()
-    #subscibers = data.query('type == "Оплата с созданием подписки"')['user_id'].unique()
-    subscibers = data.query('subscr.notna()')['user_id'].unique()
-    allsub = len(subscibers)
-    allsubsum = data.query('user_id.isin(@subscibers)')['oper_sum'].sum()
-        
-    row = st.container()
-    with row:    
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            container = st.container(border=True)
-            container.write(f"Всего пользователей: **{allusers}**")
-        with col2:
-            container = st.container(border=True)
-            container.write(f"Оформивщих подписку: **{allsub}**")            
-
-        with col3:
-            container = st.container(border=True)
-            container.write(f"Всего доходов: **{allsum:_} р**".replace('_', ' '))
-
-    row = st.container()
-    with row:    
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            container = st.container(border=True)
-            container.write(f"Всего транзанкий: **{alltr}**")
-        with col2:
-            container = st.container(border=True)
-            container.markdown(f"Доля оформивщих подписку: **{100 * allsub/allusers:.2f}%**")
-        with col3:
-            container = st.container(border=True)
-            container.write(f"Доходов от подписчиков: **{allsubsum:_.0f} р**".replace('_', ' '))
-
-    week_dynamik = data.groupby('tr_week').agg({'oper_sum' : 'sum', 'user_id' : 'nunique'})
-    week_dynamik['cumsum'] = week_dynamik['oper_sum'].cumsum()
-    week_dynamik['cumclient'] = week_dynamik['user_id'].cumsum()
 
     day_dynamik = data.groupby('tr_date').agg({'tr_id' : 'count', 'oper_sum' : 'sum', 'user_id' : 'nunique'})
     day_dynamik['cumsum'] = day_dynamik['oper_sum'].cumsum()
-    day_dynamik['cumclient'] = day_dynamik['user_id'].cumsum()
-    day_dynamik['sub_count'] = data.query('user_id.isin(@subscibers)').groupby('tr_date')['user_id'].nunique()
-    day_dynamik['sub_sum'] = data.query('user_id.isin(@subscibers)').groupby('tr_date')['oper_sum'].sum()
+    day_dynamik['cumtr'] = day_dynamik['tr_id'].cumsum()
+    day_dynamik['cumuser'] = data[['tr_date','user_id']].drop_duplicates(['user_id']).groupby('tr_date').count().cumsum()
+    day_dynamik['cumuser'] = day_dynamik['cumuser'].ffill()
+    tab1, tab2, tab3 = st.tabs(["Суммарные", "Среднемесячные", "Ежедневные"])
+    with tab1:
+        prbar.progress(30, text='Сумарные значения')
+    # ------- Сумарные значения ----------
+        row = st.container()
+        with row:    
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                container = st.container(border=True)
+                container.write(f"Всего пользователей: **{allusers}**")
+            with col2:
+                container = st.container(border=True)
+                container.write(f"Всего транзанкий: **{alltr}**")        
+            with col3:
+                container = st.container(border=True)
+                container.write(f"Всего доходов: **{allsum:_} р**".replace('_', ' '))
 
+        row = st.container()
+        with row:    
+            col1, col2 = st.columns(2, border=True)
+            with col1:
+                st.text('Пользователи нарастанием')
+                st.line_chart(day_dynamik['cumuser'], color='#1f77b4', x_label = '', y_label = '')         
+                
+            with col2:
+                st.text('Сумма платежей нарастанием')
+                st.line_chart(day_dynamik['cumsum'], color='#2ca02c', x_label = '', y_label = '')
+
+
+
+    month_dynamik = data.groupby('tr_month').agg({'tr_date' : 'first', 'tr_id' : 'count', 'oper_sum' : 'sum', 'user_id' : 'nunique'})
+    month_dynamik['cumsum'] = month_dynamik['oper_sum'].cumsum()
+    month_dynamik['cumclient'] = month_dynamik['user_id'].cumsum()
+    month_dynamik['cumtr'] = month_dynamik['tr_id'].cumsum()    
     
-    row = st.container()
-    with row:    
-        col1, col2 = st.columns(2, border=True)
-        with col1:
-            st.markdown('**График сумма платежей по дням**')
-            st.line_chart(day_dynamik['oper_sum'], color='#ffaa00', x_label = 'Дата', y_label = 'Рубли')
-        with col2:
-            st.markdown('Плательщики по дням')
-            st.line_chart(day_dynamik['user_id'], color='#ff2200', x_label = 'Дата', y_label = 'Человек')
-            
-    row = st.container()
-    with row:    
-        col1, col2 = st.columns(2, border=True)
-        with col1:
-            st.text('Сумма платежей нарастанием')
-            st.line_chart(day_dynamik['cumsum'], color='#ff7f0e', x_label = 'Дата', y_label = 'Рубли')
+    users_month = month_dynamik['user_id'].mean()
+    tr_month = month_dynamik['tr_id'].mean()
+    sum_month = month_dynamik['oper_sum'].mean()
+    
+    # ------- Среднемесячные значения ----------
+    with tab2:
+        prbar.progress(60, text='Средние значения')
+        row = st.container()
+        with row:    
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                container = st.container(border=True)
+                container.write(f"Среднее колво пользователей в месяц: **{users_month:.0f}**")
+            with col2:
+                container = st.container(border=True)
+                container.write(f"Средняя колво платежей в месяц: **{tr_month:.0f}**") 
+            with col3:
+                container = st.container(border=True)
+                container.write(f"Средняя сумма платежей в месяц: **{sum_month:_.0f}** р.".replace('_', ' '))  
 
-        with col2:
-            st.text('Плательщики нарастанием')
-            st.line_chart(day_dynamik['cumclient'], color='#1f77b4', x_label = 'Дата', y_label = 'Человек')
+        row = st.container()
+        with row:    
+            col1, col2 = st.columns(2, border=True)
+            with col1:
+                st.markdown('**Плательщики по месяцам**')
+                st.line_chart(month_dynamik, y='user_id', x='tr_date', color='#1f77b4', x_label = '', y_label = '')
 
-    #st.markdown('<div style="background-color:#ff0000;">**This is a custom-styled container.</div>', unsafe_allow_html=True)        
+            with col2:
+                st.markdown('Платежи по месяцам')
+                st.line_chart(month_dynamik, y='oper_sum', x='tr_date', color='#2ca02c', x_label = '', y_label = '')
+                
+    daysum = day_dynamik['oper_sum'].mean()
+    daytr = day_dynamik['tr_id'].mean()
+    dayuser = day_dynamik['user_id'].mean()
+    
+    
+    with tab3:
+        prbar.progress(90, text='Ежедневные значения')        
+    # ------- Ежедневные значения ----------        
+        row = st.container()
+        with row:    
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                container = st.container(border=True)
+                container.write(f"Среднее колво пользователей в день: **{dayuser:.0f}**")
+            with col2:
+                container = st.container(border=True)
+                container.write(f"Средняя колво платежей в день: **{daytr:.0f}**") 
+            with col3:
+                container = st.container(border=True)
+                container.write(f"Средняя сумма платежей в день: **{daysum:_.0f}** р.".replace('_', ' '))              
 
+        row = st.container()
+        with row:    
+            col1, col2 = st.columns(2, border=True)
+            with col1:
+                st.markdown('**Плательщики по дням**')
+                st.line_chart(day_dynamik['user_id'], color='#1f77b4', x_label = '', y_label = '')      
+
+            with col2:
+                st.markdown('Платежи по дням')
+                st.line_chart(day_dynamik['oper_sum'], color='#2ca02c', x_label = '', y_label = '')      
+                
+    prbar.empty()
 
 
 sg_lib.footer()
