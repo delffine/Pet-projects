@@ -20,8 +20,19 @@ client_table = sg_lib.get_client_table(data)
 mainblok = st.container()
 with mainblok:
     prbar = st.progress(0, text='Начинаю вычисления ...')    
-    st.subheader('Основные показатели')
+    st.header('Основные показатели')
 
+    date_filtr = st.container(border=True)
+    with date_filtr:
+        date_min = pd.to_datetime(data['tr_date']).dt.date.min()
+        date_max = pd.to_datetime(data['tr_date']).dt.date.max()
+        date_range = st.slider('Фильтр данных по датам', date_min, date_max, (date_min, date_max), key='tr_date_slider')
+        date_min = str(date_range[0])
+        date_max = str(date_range[1])
+
+    data = data.query('@date_min < tr_date < @date_max')
+    
+    
     allusers = data['user_id'].nunique()
     alltr = data['tr_id'].nunique()
     allsum = data['oper_sum'].sum()
@@ -52,11 +63,11 @@ with mainblok:
         with row:    
             col1, col2 = st.columns(2, border=True)
             with col1:
-                st.text('Пользователи нарастанием')
+                st.markdown('**Пользователи нарастанием**')
                 st.line_chart(day_dynamik['cumuser'], color='#1f77b4', x_label = '', y_label = '')         
                 
             with col2:
-                st.text('Сумма платежей нарастанием')
+                st.markdown('**Сумма платежей нарастанием**')
                 st.line_chart(day_dynamik['cumsum'], color='#2ca02c', x_label = '', y_label = '')
 
 
@@ -94,7 +105,7 @@ with mainblok:
                 st.line_chart(month_dynamik, y='user_id', x='tr_date', color='#1f77b4', x_label = '', y_label = '')
 
             with col2:
-                st.markdown('Платежи по месяцам')
+                st.markdown('**Платежи по месяцам**')
                 st.line_chart(month_dynamik, y='oper_sum', x='tr_date', color='#2ca02c', x_label = '', y_label = '')
                 
     daysum = day_dynamik['oper_sum'].mean()
@@ -126,7 +137,7 @@ with mainblok:
                 st.line_chart(day_dynamik['user_id'], color='#1f77b4', x_label = '', y_label = '')      
 
             with col2:
-                st.markdown('Платежи по дням')
+                st.markdown('**Платежи по дням**')
                 st.line_chart(day_dynamik['oper_sum'], color='#2ca02c', x_label = '', y_label = '')      
                 
     prbar.empty()

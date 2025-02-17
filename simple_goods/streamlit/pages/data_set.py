@@ -76,6 +76,9 @@ def load_rawdata():
     rawdt['status'] = rawdt['Статус операции'].replace({'Completed' : 'Завершена', 'Declined' : 'Отклонена'} )
     rawdt['purpose'] = rawdt['Назначение платежа'].str.lower().str.replace('&quot;' , '"')
     rawdt['date'] = pd.to_datetime(rawdt['Дата и время'], format = '%Y-%m-%d %H:%M:$S', errors = 'coerce')
+
+    #заменяем пропуски в назначении и типе платежа
+    rawdt['purpose'] = rawdt['purpose'].fillna('Не указано')
     
     #колонки с днем, неделью и месяцем транзакции
     rawdt['tr_date'] = rawdt['date'].dt.date
@@ -86,14 +89,14 @@ def load_rawdata():
     prbar.progress(pv, 'Создаем новые результирующие / преобразованные колонки')
     
     #Удаляем бесполезные колонки
-    na_col = ['Срок действия' , 'Эмитент' , 'Карта' , 'Страна эмитента карты',
-              'Public ID' , 'Код' ,'RRN', 'Код авторизации', 'Способ оплаты',
-              'Платежная система', 'Валюта операции', 'Примечание',
-              'Статус', 'Статус операции',
-              'ID плательщика', 'Плательщик', 'user_mail',
-              'Назначение платежа',
-              'Дата и время', 'Дата возмещения', 'Дата/время создания']
-    rawdt = rawdt.drop(na_col, axis = 1)
+    #na_col = ['Срок действия' , 'Эмитент' , 'Карта' , 'Страна эмитента карты',
+    #          'Public ID' , 'Код' ,'RRN', 'Код авторизации', 'Способ оплаты',
+    #          'Платежная система', 'Валюта операции', 'Примечание',
+    #          'Статус', 'Статус операции',
+    #          'ID плательщика', 'Плательщик', 'user_mail',
+    #          'Назначение платежа',
+    #          'Дата и время', 'Дата возмещения', 'Дата/время создания']
+    #rawdt = rawdt.drop(na_col, axis = 1)
     pv +=10
     prbar.progress(pv, 'Удаляем бесполезные колонки')
 
@@ -108,7 +111,12 @@ def load_rawdata():
                       'Сумма операции' : 'oper_sum',
                       'Сумма комиссии' : 'oper_com',
                       'Сумма возмещения' : 'final_sum',
+                      'Дата возмещения' : 'final_date',
                       '% комиссии' : 'com_perc',
+                      'Платежная система' : 'pay_system', 
+                      'Эмитент' : 'pay_bank',
+                      'Страна эмитента карты' : 'pay_bank_country',
+                      'Примечание' : 'pay_result',                       
                       'Номер заказа' : 'order_id',
                       'Подписка' : 'subscr',
                       'Страна' : 'country',
@@ -118,31 +126,32 @@ def load_rawdata():
            )
            
     prbar.progress(100, 'Загрузка данных завершена')      
-    st.text(f'Всего загружено **{all}** строк данных.\nПосле обработки для дальнейшего анализа отобрано **{len(data)}** строк данных.')
+    st.success(f'Всего загружено **{all}** строк данных.\nПосле обработки для дальнейшего анализа отобрано **{len(data)}** строк данных.')
     
 
     
     st.text(f'Сохраняю в CSV формате, путь data/sg_data.csv')
-    data[['tr_id', 'date', 'user_id', 'oper_sum', 
+    data[['tr_id', 'date', 'user_id', 'oper_sum', 'final_sum', 'final_date',
             'order_id', 'type',  'purpose', 'status', 
             'subscr', 'city', 'country', 
             'tr_date', 'tr_week', 'tr_month', 'file']].to_csv('data/sg_data.csv', index=False)
     prbar.empty()
     return data
 
-def uploader_callback():
-    st.text(f'Файлы загружены!')   
+
     
     
 sg_lib.header()
 data = sg_lib.loaddata()
 
 st.header('Загруженные данные')
-modification_time = os.path.getmtime('data/sg_data.csv')
-last_modified = (pd.to_datetime(modification_time, unit='s') + datetime.timedelta(hours=4)).strftime('%Y.%m.%d %H:%M:%S')
-
-st.markdown(f'Всего **{len(data)}** строк, aктуальность файла данных **{last_modified}**')
-
+try:
+    modification_time = os.path.getmtime('data/sg_data.csv')
+    last_modified = (pd.to_datetime(modification_time, unit='s') + datetime.timedelta(hours=4)).strftime('%Y.%m.%d %H:%M:%S')
+    st.info(f'Всего **{len(data)}** строк, aктуальность локального датасета **{last_modified}**')
+except:
+    st.error(f'Нет локального файла CSV с данными!')
+    
 
         
 st.text('Пример данных')
@@ -158,7 +167,12 @@ with col1:
     if fc > 0:
         prbar = st.progress(0, '')
         for uploaded_file in uploaded_files:
-            file_path = 'data/'+uploaded_file.name
+            
+            data_dir = 'data/'
+            if not os.path.isdir(data_dir):
+                os.mkdir(data_dir)
+                
+            file_path = data_dir+uploaded_file.name
             with open(file_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
             if os.path.exists(file_path): 
@@ -168,11 +182,11 @@ with col1:
             i +=1
         prbar.empty()
         if i == fc: 
-            st.text(f'{i} файлов загружено!')
+            st.success(f'{i} файлов загружено! Можно пересоздавать локальный датасет')
         else:  
-            st.text(f'НЕ все файлы загружены')  
+            st.error(f'НЕ все файлы загружены')  
 with col3:        
-    if st.button('Пересоздать рабочий датасет', type="primary"):
+    if st.button('Пересоздать локальный датасет', type="primary"):
         load_rawdata()
         
 

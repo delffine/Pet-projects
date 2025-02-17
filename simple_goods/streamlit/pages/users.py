@@ -15,8 +15,19 @@ client_table = sg_lib.get_client_table(data)
 mainblok = st.container()
 with mainblok:
     prbar = st.progress(0, text='Начинаю вычисления ...')    
-    st.subheader('Пользователи')
+    st.header('Пользователи')
 
+    date_filtr = st.container(border=True)
+    with date_filtr:
+        date_min = pd.to_datetime(data['tr_date']).dt.date.min()
+        date_max = pd.to_datetime(data['tr_date']).dt.date.max()
+        date_range = st.slider('Фильтр данных по датам', date_min, date_max, (date_min, date_max), key='tr_date_slider')
+        date_min = str(date_range[0])
+        date_max = str(date_range[1])
+
+    data = data.query('@date_min < tr_date < @date_max')
+    
+    
     allusers = data['user_id'].nunique()
     activ_users = len(client_table.query('day_on < 30'))
 
@@ -52,9 +63,9 @@ with mainblok:
 
         row = st.container()
         with row:    
-            col1, col2 = st.columns(2)
+            col1, col2 = st.columns(2, border=True)
             with col1:
-                st.text('Пользователи с наибольщими платежами')
+                st.markdown('**Пользователи с наибольщими платежами**')
                 dd = data.groupby('user_id', as_index=False).agg({'oper_sum': 'sum', 'tr_id': 'count'}).sort_values(by='oper_sum', ascending=False).head(10)
 
                 st.write(alt.Chart(dd).mark_bar().encode(
@@ -64,7 +75,7 @@ with mainblok:
                 ))
 
             with col2:
-                st.text('Пользователи сделавшие больще всего транзакций')
+                st.markdown('**Пользователи сделавшие больще всего транзакций**')
                 st.write(alt.Chart(dd).mark_bar().encode(
                     y=alt.Y('user_id', sort='-x', title='Пользователи'),
                     x=alt.X('tr_id', title='Колво транзакций'),
@@ -74,9 +85,9 @@ with mainblok:
 
         row = st.container()
         with row:    
-            col1, col2 = st.columns(2)
+            col1, col2 = st.columns(2, border=True)
             with col1:
-                st.text('ТОП стран пользователей')
+                st.markdown('**ТОП стран пользователей**')
                 dd = data.groupby('country', as_index=False)['user_id'].nunique().sort_values(by='user_id', ascending=False).head(10)
 
                 st.write(alt.Chart(dd).mark_bar().encode(
@@ -86,7 +97,7 @@ with mainblok:
                 ))
 
             with col2:
-                st.text('ТОП городов пользователей')
+                st.markdown('**ТОП городов пользователей**')
                 dd = data.groupby('city', as_index=False)['user_id'].nunique().sort_values(by='user_id', ascending=False).head(10)
 
                 st.write(alt.Chart(dd).mark_bar().encode(
@@ -107,17 +118,17 @@ with mainblok:
                 container.write(f"Процент подписчиков: **{procsub:.2f}%**")            
             with col3:
                 container = st.container(border=True)
-                container.write(f"Сумма платежей: **{allsubsum:_.0f}** р".replace('_', ' '))            
+                container.write(f"Сумма платежей: **{allsubsum:_.0f} р**".replace('_', ' '))            
 
         row = st.container()
         with row:    
             col1, col2 = st.columns(2, border=True)
             with col1:
-                st.text('Подписчики нарастанием')
+                st.markdown('**Подписчики нарастанием**')
                 st.line_chart(sub_dynamik['cumuser'], color='#1f77b4', x_label = '', y_label = '')         
                 
             with col2:
-                st.text('Сумма платежей нарастанием')
+                st.markdown('**Сумма платежей нарастанием**')
                 st.line_chart(sub_dynamik['cumsum'], color='#2ca02c', x_label = '', y_label = '')       
     prbar.empty()     
 
