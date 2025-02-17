@@ -1,15 +1,9 @@
 import streamlit as st
 import pandas as pd
-import os, sys
-#import matplotlib.pyplot as plt
-
+import os
 import datetime
-#from matplotlib import colors
-#from matplotlib import colormaps
 import calendar
 import numpy as np
-#from urllib.parse import urlencode 
-#import requests
 import altair as alt
 
 
@@ -51,8 +45,8 @@ def header():
     st.header('Аналитическая панель инклюзивных мастерских «Простые вещи»')    
     header = st.container(border=True)
     with header:
-        menu = ['Основные показатели', 'Пользователи', 'RFM анализ', 'Когортный анализ']
-        script = ['sg_main.py', 'pages/users.py', 'pages/rfm.py', 'pages/cogort.py']
+        menu = ['Основные показатели', 'Пользователи', 'Платежи', 'RFM анализ', 'Когортный анализ']
+        script = ['sg_main.py', 'pages/users.py', 'pages/orders.py', 'pages/rfm.py', 'pages/cogort.py']
         len_menu = len(menu)
         mm = st.columns(len_menu)
         for i in range(0, len_menu):
@@ -89,15 +83,16 @@ def loaddata():
         data = pd.read_csv(data_path)
     except:
         #data = pd.read_csv('data/sg_data.csv')
-        st.write('Запасной вариант читаю данные с Гугл диска!')
+        #st.markdown(f'<p style="background-color:#FF0000;color:#FFFFFF;padding:5px;">Нет локальных данных! Читаю данные с Гугл диска!</p>', unsafe_allow_html=True)
+        st.warning('Нет локальных данных! Читаю данные с Гугл диска!')
         url='https://drive.google.com/file/d/19IKilgchEDr-Qk2TJzv-0CRA9Snx3sN6/view?usp=drive_link'
         url='https://drive.google.com/uc?id=' + url.split('/')[-2]
         data = pd.read_csv(url)
 
+    data['date'] = pd.to_datetime(data['date'])
+
     return data
-    
-    
-    return data
+
 
 def get_client_table(data, r1=30, r2=90, f1=0.99, f2=2, m1=400, m2=1400):
 
@@ -127,50 +122,6 @@ def get_client_table(data, r1=30, r2=90, f1=0.99, f2=2, m1=400, m2=1400):
     
     return client_table
 
-
-def show_rfm_table_sns(rfm_table, col = 'rfm_sum'):
-    import seaborn as sns
-    fig = plt.figure(figsize = (12, 6))
-    rfm_pivot = rfm_table.pivot(index = ['R', 'F'], columns = 'M', values = col).fillna(0)
-    rfm_pivot.rename(index={'1':'Недавние(1)', '2' : 'Спящие(2)', '3': 'Уходящие(3)'}, level=0, inplace=True)
-    rfm_pivot.rename(index={'1':'Частые(1)', '2' : 'Редкие(2)', '3': 'Разовые(3)'}, level=1, inplace=True)
-    rfm_pivot.rename(columns={'1':'Большой чек(1)', '2' : 'Средний чек(2)', '3': 'Малый чек(3)'}, inplace=True)
-    par = ''
-    if col == 'rfm_sum': par = 'Сумма платежей'
-    if col == 'rfm_users': par = 'Количеству пользователей' 
-    if col == 'rfm_tr': par = 'Количество транзакций' 
-
-    sns.heatmap(rfm_pivot, cmap='RdYlGn', annot = True, fmt='.0f', cbar=False)
-    plt.xlabel('')
-    plt.ylabel('')
-    plt.title(f'Тепловая карта RFM анализа по параметру "{par}"')
-    
-    return fig
-
-
-
-
-#Функция показа таблицы данамики по когортам
-def show_chogort_table_sns(chogort_table, col='user_count', pr=0):
-    import seaborn as sns
-    dd = chogort_table.pivot(index = 'm_live', columns = 'ch', values = col)
-
-    par = ''
-    if col == 'oper_sum': par = 'Сумма платежей'
-    if col == 'user_count': par = 'Количество пользователей'
-    if col == 'tr_count': par = 'Количество транзакций'
-    if col == 'ltv': par = 'LTV'
-    if col == 'ltv_m': par = 'LTV в месяц'
-    if col == 'rr': par = 'Коэф. удержания'
-    if col == 'cr': par = 'Коэф. оттока'
-        
-    fig = plt.figure(figsize = (12, 6))
-    dd.columns=calendar.month_abbr[1:len(dd.columns)+1]
-    sns.heatmap(dd, cmap='RdYlGn', annot = True, fmt=f'.{pr}f', cbar=False)
-    plt.xlabel('')
-    plt.ylabel('')
-   
-    return fig
     
 def corogt_alt(dd, xcol, ycol, valcol, pr=0):
     base = alt.Chart(dd).encode(
