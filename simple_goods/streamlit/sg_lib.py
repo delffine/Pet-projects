@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 #import os
+import sys, os
 #import matplotlib.pyplot as plt
 #import seaborn as sns
 import datetime
@@ -79,7 +80,8 @@ def footer():
     
 
 def loaddata():
-    path = 'data/sg_data.csv'
+    run_pathname = os.path.dirname(sys.argv[0])
+    path = run_pathname + 'data/sg_data.csv'
     data = pd.read_csv('data/sg_data.csv')
     return data
 
