@@ -76,20 +76,19 @@ with mainblok:
     #st.table(rfm_table[['RFM', 'R', 'F', 'M', 'rfm_users', 'rfm_tr', 'rfm_sum']])
 
     st.header('RFM таблица')
-    st.data_editor(
-    rfm_table[['RFM', 'R', 'F', 'M', 'rfm_users', 'rfm_tr', 'rfm_sum', 'avg_sum']],
-    column_config={
-        "R": st.column_config.TextColumn("Давность"),
-        "F": st.column_config.TextColumn("Частота"),
-        "M": st.column_config.TextColumn("Сумма"),
-        "rfm_users": st.column_config.ProgressColumn("Пользователей", format="%d", max_value = rfm_table['rfm_users'].max()),
-        "rfm_tr": st.column_config.ProgressColumn("Платежей", format="%d", max_value = rfm_table['rfm_tr'].max()),
-        "rfm_sum": st.column_config.ProgressColumn("Общая сумма", format="%d", max_value = rfm_table['rfm_sum'].max()),
-        "avg_sum": st.column_config.ProgressColumn("Средний чек", format="%d", max_value = rfm_table['avg_sum'].max()),
-    },
-    use_container_width=True,
-    hide_index=True,
-    )
+    st.data_editor(rfm_table[['RFM', 'R', 'F', 'M', 'rfm_users', 'rfm_tr', 'rfm_sum', 'avg_sum']],
+       column_config={
+           "R": st.column_config.TextColumn("Давность"),
+           "F": st.column_config.TextColumn("Частота"),
+           "M": st.column_config.TextColumn("Сумма"),
+           "rfm_users": st.column_config.ProgressColumn("Пользователей", format="%d", max_value = rfm_table['rfm_users'].max()),
+           "rfm_tr": st.column_config.ProgressColumn("Платежей", format="%d", max_value = rfm_table['rfm_tr'].max()),
+           "rfm_sum": st.column_config.ProgressColumn("Общая сумма", format="%d", max_value = rfm_table['rfm_sum'].max()),
+           "avg_sum": st.column_config.ProgressColumn("Средний чек", format="%d", max_value = rfm_table['avg_sum'].max()),
+       },
+       use_container_width=True,
+       hide_index=True,
+       )
     prbar.empty()
     
    
