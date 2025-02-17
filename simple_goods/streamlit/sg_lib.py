@@ -81,10 +81,9 @@ def footer():
 def loaddata():
     #path = 'data/sg_data.csv'
     #data = pd.read_csv('data/sg_data.csv')
-
+"""
     app_dir = os.path.dirname(os.path.realpath(__file__)).replace('\\', '/')
     data_path = app_dir + '/data/1sg_data.csv'
-    
     try:
         data = pd.read_csv(data_path)
     except:
@@ -93,7 +92,8 @@ def loaddata():
         url='https://drive.google.com/file/d/19IKilgchEDr-Qk2TJzv-0CRA9Snx3sN6/view?usp=drive_link'
         url='https://drive.google.com/uc?id=' + url.split('/')[-2]
         data = pd.read_csv(url)
-
+"""        
+    data = pd.DataFrame([])
     return data
     
     
