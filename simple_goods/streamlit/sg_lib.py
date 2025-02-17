@@ -1,9 +1,8 @@
 import streamlit as st
 import pandas as pd
-#import os
-import sys, os
+import os, sys
 #import matplotlib.pyplot as plt
-#import seaborn as sns
+
 import datetime
 #from matplotlib import colors
 #from matplotlib import colormaps
@@ -80,12 +79,24 @@ def footer():
     
 
 def loaddata():
+    #path = 'data/sg_data.csv'
+    #data = pd.read_csv('data/sg_data.csv')
+
+    app_dir = os.path.dirname(os.path.realpath(__file__)).replace('\\', '/')
+    data_path = app_dir + '/data/1sg_data.csv'
+    
     try:
-        run_pathname = os.path.dirname(sys.argv[0])
-        path = run_pathname + 'data/sg_data.csv'
-        data = pd.read_csv('data/sg_data.csv')
+        data = pd.read_csv(data_path)
     except:
-        data = pd.read_csv('https://github.com/delffine/Pet-projects/blob/main/simple_goods/streamlit/data/sg_data.csv')
+        #data = pd.read_csv('data/sg_data.csv')
+        st.write('Запасной вариант читаю данные с Гугл диска!')
+        url='https://drive.google.com/file/d/19IKilgchEDr-Qk2TJzv-0CRA9Snx3sN6/view?usp=drive_link'
+        url='https://drive.google.com/uc?id=' + url.split('/')[-2]
+        data = pd.read_csv(url)
+
+    return data
+    
+    
     return data
 
 def get_client_table(data, r1=30, r2=90, f1=0.99, f2=2, m1=400, m2=1400):
@@ -118,6 +129,7 @@ def get_client_table(data, r1=30, r2=90, f1=0.99, f2=2, m1=400, m2=1400):
 
 
 def show_rfm_table_sns(rfm_table, col = 'rfm_sum'):
+    import seaborn as sns
     fig = plt.figure(figsize = (12, 6))
     rfm_pivot = rfm_table.pivot(index = ['R', 'F'], columns = 'M', values = col).fillna(0)
     rfm_pivot.rename(index={'1':'Недавние(1)', '2' : 'Спящие(2)', '3': 'Уходящие(3)'}, level=0, inplace=True)
@@ -140,6 +152,7 @@ def show_rfm_table_sns(rfm_table, col = 'rfm_sum'):
 
 #Функция показа таблицы данамики по когортам
 def show_chogort_table_sns(chogort_table, col='user_count', pr=0):
+    import seaborn as sns
     dd = chogort_table.pivot(index = 'm_live', columns = 'ch', values = col)
 
     par = ''
