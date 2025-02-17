@@ -81,7 +81,7 @@ with mainblok:
            "R": st.column_config.TextColumn("Давность"),
            "F": st.column_config.TextColumn("Частота"),
            "M": st.column_config.TextColumn("Сумма"),
-           "rfm_users": st.column_config.ProgressColumn("Пользователей", format="%d", max_value = rfm_table['rfm_users'].max()),
+           "rfm_users": st.column_config.ProgressColumn("Пользователей", format="%d", max_value = rfm_table["rfm_users"].max()),
     #       "rfm_tr": st.column_config.ProgressColumn("Платежей", format="%d", max_value = rfm_table['rfm_tr'].max()),
     #       "rfm_sum": st.column_config.ProgressColumn("Общая сумма", format="%d", max_value = rfm_table['rfm_sum'].max()),
     #       "avg_sum": st.column_config.ProgressColumn("Средний чек", format="%d", max_value = rfm_table['avg_sum'].max()),
