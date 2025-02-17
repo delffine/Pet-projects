@@ -80,9 +80,12 @@ def footer():
     
 
 def loaddata():
-    run_pathname = os.path.dirname(sys.argv[0])
-    path = run_pathname + 'data/sg_data.csv'
-    data = pd.read_csv('data/sg_data.csv')
+    try:
+        run_pathname = os.path.dirname(sys.argv[0])
+        path = run_pathname + 'data/sg_data.csv'
+        data = pd.read_csv('data/sg_data.csv')
+    except:
+        data = pd.read_csv('https://github.com/delffine/Pet-projects/blob/main/simple_goods/streamlit/data/sg_data.csv')
     return data
 
 def get_client_table(data, r1=30, r2=90, f1=0.99, f2=2, m1=400, m2=1400):
