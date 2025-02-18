@@ -26,14 +26,8 @@ def header():
     layout='wide',
     page_title='Дашборд АНО «Простые вещи»',
     initial_sidebar_state = 'collapsed',
-    menu_items={
-        'Основные показатели': 'sg_main.py',
-        'Пользователи': "users.py",
-        'Платежи': "orders.py"
-    }
     )
 #    st.cache_resource.clear()
-
 #    py_pages = {
 #        "Разделы": [
 #            st.Page("sg_main.py", title="Основные показатели"),
