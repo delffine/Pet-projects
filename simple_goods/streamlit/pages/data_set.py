@@ -12,7 +12,11 @@ import sg_lib
 def load_rawdata():
     rawdt = pd.DataFrame([])
 #   path = 'd:/newwork/-=simple_goods=-/data/'
-    path = 'data/'
+#    path = 'data/'
+    
+    app_dir = os.path.dirname(os.path.realpath(__file__)).replace('\\', '/')
+    path = os.path.dirname(app_dir.rstrip('/')) + '/data/'
+    
     pv = 0
     all = 0
     l = 0
@@ -101,7 +105,8 @@ def load_rawdata():
     prbar.progress(pv, 'Удаляем бесполезные колонки')
 
     #Для дальнейшего анализа берем только данные с завершенными операциями
-    data = rawdt.query('status == "Завершена"').copy()
+    #data = rawdt.query('status == "Завершена"').copy()
+    data = rawdt.copy()
     data = data.reset_index(drop = True)
 
     pv +=10
@@ -130,11 +135,12 @@ def load_rawdata():
     
 
     
-    st.text(f'Сохраняю в CSV формате, путь data/sg_data.csv')
-    data[['tr_id', 'date', 'user_id', 'oper_sum', 'final_sum', 'final_date',
+    st.text(f'Сохраняю в CSV формате в папку {path}')
+    data[['tr_id', 'date', 'user_id', 'user_mail', 'oper_sum', 'final_sum', 'final_date',
             'order_id', 'type',  'purpose', 'status', 
             'subscr', 'city', 'country', 
-            'tr_date', 'tr_week', 'tr_month', 'file']].to_csv('data/sg_data.csv', index=False)
+            'pay_system', 'pay_bank', 'pay_bank_country', 'pay_result', 
+            'tr_date', 'tr_week', 'tr_month', 'file']].to_csv(path+'sg_data.csv', index=False)
     prbar.empty()
     return data
 
@@ -166,9 +172,10 @@ with col1:
     i = 0    
     if fc > 0:
         prbar = st.progress(0, '')
+        app_dir = os.path.dirname(os.path.realpath(__file__)).replace('\\', '/')
+        data_dir = os.path.dirname(app_dir.rstrip('/')) + '/data/'
+
         for uploaded_file in uploaded_files:
-            
-            data_dir = 'data/'
             if not os.path.isdir(data_dir):
                 os.mkdir(data_dir)
                 
@@ -182,7 +189,7 @@ with col1:
             i +=1
         prbar.empty()
         if i == fc: 
-            st.success(f'{i} файлов загружено! Можно пересоздавать локальный датасет')
+            st.success(f'{i} файлов загружено в {data_dir}!\nМожно пересоздавать локальный датасет')
         else:  
             st.error(f'НЕ все файлы загружены')  
 with col3:        

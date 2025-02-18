@@ -9,6 +9,7 @@ import sg_lib
 
 sg_lib.header()  
 data = sg_lib.loaddata()
+data = data.query('status == "Завершена"').reset_index(drop=False)
 client_table = sg_lib.get_client_table(data)
 
 

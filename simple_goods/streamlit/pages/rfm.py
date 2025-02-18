@@ -4,11 +4,12 @@ import datetime
 import calendar
 import numpy as np
 import sg_lib
- 
+import io
 
 sg_lib.header()
 data = sg_lib.loaddata()
-
+data = data.query('status == "Завершена"').reset_index(drop=False)
+   
 
 mainblok = st.container()
 
@@ -76,22 +77,39 @@ with mainblok:
     #st.table(rfm_table[['RFM', 'R', 'F', 'M', 'rfm_users', 'rfm_tr', 'rfm_sum']])
 
     st.header('RFM таблица')
-    st.data_editor(
-    rfm_table[['RFM', 'R', 'F', 'M', 'rfm_users', 'rfm_tr', 'rfm_sum', 'avg_sum']],
-    column_config={
-        "R": st.column_config.TextColumn("Давность"),
-        "F": st.column_config.TextColumn("Частота"),
-        "M": st.column_config.TextColumn("Сумма"),
-        "rfm_users": st.column_config.ProgressColumn("Пользователей", format="%d", max_value = rfm_table['rfm_users'].max()),
-        "rfm_tr": st.column_config.ProgressColumn("Платежей", format="%d", max_value = rfm_table['rfm_tr'].max()),
-        "rfm_sum": st.column_config.ProgressColumn("Общая сумма", format="%d", max_value = rfm_table['rfm_sum'].max()),
-        "avg_sum": st.column_config.ProgressColumn("Средний чек", format="%d", max_value = rfm_table['avg_sum'].max()),
-    },
-    use_container_width=True,
-    hide_index=True,
-    )
-    prbar.empty()
+    st.data_editor(rfm_table[['RFM', 'R', 'F', 'M', 'rfm_users', 'rfm_tr', 'rfm_sum', 'avg_sum']],
+       column_config={
+           "R": st.column_config.TextColumn("Давность"),
+           "F": st.column_config.TextColumn("Частота"),
+           "M": st.column_config.TextColumn("Сумма"),
+           #"rfm_users": st.column_config.TextColumn("Колво пользовтелей"),
+           #"rfm_tr": st.column_config.TextColumn("Колво платежей"),
+           #"rfm_sum": st.column_config.TextColumn("Общая сумма"),
+           #"avg_sum": st.column_config.TextColumn("Средний чек"),
+    #       "rfm_users": st.column_config.ProgressColumn("Пользователей", format="%d", max_value = rfm_table["rfm_users"].max()),
+    #       "rfm_tr": st.column_config.ProgressColumn("Платежей", format="%d", max_value = rfm_table['rfm_tr'].max()),
+    #       "rfm_sum": st.column_config.ProgressColumn("Общая сумма", format="%d", max_value = rfm_table['rfm_sum'].max()),
+    #       "avg_sum": st.column_config.ProgressColumn("Средний чек", format="%d", max_value = rfm_table['avg_sum'].max()),
+       },
+       use_container_width=True,
+       hide_index=True,
+       )
+       
+    prbar.progress(100, text='')   
+
+    st.warning('* Ранги RFM: 1 - отлично, 2 - хорошо, 3 - плохо')
+
+
+    #client_table
+    download_rfm = client_table.reset_index()[['RFM', 'user_id', 'user_mail', 'first_date', 'last_date', 'oper_count', 'oper_sum']].copy()
+    download_rfm['first_date'] = download_rfm['first_date'].dt.date
+    download_rfm['last_date'] = download_rfm['last_date'].dt.date
+    download_rfm.columns = ['RFM', 'id пользователя', 'mail пользователя', 'Первая дата', 'Последняя датa', 'Колво платежей', 'Сумма платежей']
+    buffer = io.BytesIO()
+    download_rfm.to_excel(buffer, index=False)
+    st.download_button('Скачать RFM таблицу пользователей', buffer, file_name='sg_users_rfm.xlsx', type="primary")
+
     
-   
+    prbar.empty()    
     
 sg_lib.footer()

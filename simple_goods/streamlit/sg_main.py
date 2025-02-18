@@ -14,7 +14,8 @@ import sg_lib
 sg_lib.header()
                 
 data = sg_lib.loaddata()
-client_table = sg_lib.get_client_table(data)
+data = data.query('status == "Завершена"').reset_index(drop=False)
+
 
 # ----------------- Основной блок ---------------------          
 mainblok = st.container()
