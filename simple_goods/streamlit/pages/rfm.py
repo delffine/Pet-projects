@@ -82,7 +82,7 @@ with mainblok:
            "R": st.column_config.TextColumn("Давность"),
            "F": st.column_config.TextColumn("Частота"),
            "M": st.column_config.TextColumn("Сумма"),
-           "rfm_users": st.column_config.TextColumn("Колво_пользовтелей"),
+           "rfm_users": st.column_config.NumberColumn("Колво_пользовтелей"),
            #"rfm_tr": st.column_config.TextColumn("Колво платежей"),
            #"rfm_sum": st.column_config.TextColumn("Общая сумма"),
            #"avg_sum": st.column_config.TextColumn("Средний чек"),
