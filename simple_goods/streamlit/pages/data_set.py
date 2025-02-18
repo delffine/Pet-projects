@@ -7,6 +7,9 @@ import os
 import numpy as np
 import sg_lib
 
+!pip install xlrd
+
+
 def load_rawdata():
     rawdt = pd.DataFrame([])
 #   path = 'd:/newwork/-=simple_goods=-/data/'
