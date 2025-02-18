@@ -26,6 +26,7 @@ def header():
     layout='wide',
     page_title='Дашборд АНО «Простые вещи»',
     initial_sidebar_state = 'collapsed',
+    primaryColor =  '#e5a8ca'
     )
 #    st.cache_resource.clear()
 
