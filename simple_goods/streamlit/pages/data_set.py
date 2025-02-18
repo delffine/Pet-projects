@@ -7,7 +7,8 @@ import os
 import numpy as np
 import sg_lib
 
-pip install xlrd
+import subprocess
+subprocess.run(['pip', 'install', 'xlrd']) 
 
 
 def load_rawdata():
