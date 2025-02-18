@@ -6,7 +6,7 @@ import calendar
 import os
 import numpy as np
 import sg_lib
-import xlrd
+
 
 def load_rawdata():
     rawdt = pd.DataFrame([])
@@ -26,7 +26,7 @@ def load_rawdata():
     for ff in os.listdir(path):
         if ff.split('.')[1] == 'xls':
             prbar.progress(pv, f'Загрузка из файла {ff}')
-            dd = pd.read_excel(path + ff)
+            dd = pd.read_excel(path + ff, engine='openpyxl')
             dd['file'] = ff
             l = len(dd)
             all = all + l
