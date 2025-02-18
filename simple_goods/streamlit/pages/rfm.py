@@ -94,6 +94,7 @@ with mainblok:
        use_container_width=True,
        hide_index=True,
        )
+<<<<<<< HEAD
        
     prbar.progress(100, text='')   
 
@@ -109,6 +110,9 @@ with mainblok:
     download_rfm.to_excel(buffer, index=False)
     st.download_button('Скачать RFM таблицу пользователей', buffer, file_name='sg_users_rfm.xlsx', type="primary")
 
+=======
+    prbar.empty()
+>>>>>>> c3db379b47cde0e0f926f5808a0bb60cf3261651
     
     prbar.empty()    
     
