@@ -6,8 +6,7 @@ import calendar
 import os
 import numpy as np
 import sg_lib
-import openpyxl
-
+import xlrd
 
 def load_rawdata():
     rawdt = pd.DataFrame([])
