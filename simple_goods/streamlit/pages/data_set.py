@@ -9,7 +9,7 @@ import sg_lib
 
 #import subprocess
 #subprocess.run(['pip', 'install', 'xlrd']) 
-import xlrd
+#import xlrd
 
 def load_rawdata():
     rawdt = pd.DataFrame([])
