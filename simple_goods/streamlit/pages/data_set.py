@@ -7,7 +7,7 @@ import os
 import numpy as np
 import sg_lib
 
-!pip install xlrd
+pip install xlrd
 
 
 def load_rawdata():
