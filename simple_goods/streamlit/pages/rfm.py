@@ -82,7 +82,7 @@ with mainblok:
            "R": st.column_config.TextColumn("Давность"),
            "F": st.column_config.TextColumn("Частота"),
            "M": st.column_config.TextColumn("Сумма"),
-           #"rfm_users": st.column_config.TextColumn("Колво пользовтелей"),
+           "rfm_users": st.column_config.TextColumn("Колво_пользовтелей"),
            #"rfm_tr": st.column_config.TextColumn("Колво платежей"),
            #"rfm_sum": st.column_config.TextColumn("Общая сумма"),
            #"avg_sum": st.column_config.TextColumn("Средний чек"),
@@ -94,7 +94,6 @@ with mainblok:
        use_container_width=True,
        hide_index=True,
        )
-<<<<<<< HEAD
        
     prbar.progress(100, text='')   
 
@@ -110,10 +109,6 @@ with mainblok:
     download_rfm.to_excel(buffer, index=False)
     st.download_button('Скачать RFM таблицу пользователей', buffer, file_name='sg_users_rfm.xlsx', type="primary")
 
-=======
-    prbar.empty()
->>>>>>> c3db379b47cde0e0f926f5808a0bb60cf3261651
-    
     prbar.empty()    
     
 sg_lib.footer()
