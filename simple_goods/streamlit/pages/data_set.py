@@ -20,12 +20,13 @@ def load_rawdata():
     pv = 0
     all = 0
     l = 0
-    prbar = st.progress(0, text='Начинаю загрузку данны...')
+    prbar = st.progress(0, text=f'Начинаю загрузку данны из {path}')
     #data_load_state = st.text('') 
     #st.text('Начинаю загрузку данны...')
 
     for ff in os.listdir(path):
         if ff.split('.')[1] == 'xls':
+            prbar.progress(pv, f'Загрузка из файла {ff}')
             dd = pd.read_excel(path + ff)
             dd['file'] = ff
             l = len(dd)
