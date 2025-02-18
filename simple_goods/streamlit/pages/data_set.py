@@ -151,7 +151,9 @@ data = sg_lib.loaddata()
 
 st.header('Загруженные данные')
 try:
-    modification_time = os.path.getmtime('data/sg_data.csv')
+    app_dir = os.path.dirname(os.path.realpath(__file__)).replace('\\', '/')
+    path = os.path.dirname(app_dir.rstrip('/')) + '/data/'
+    modification_time = os.path.getmtime(path+'sg_data.csv')
     last_modified = (pd.to_datetime(modification_time, unit='s') + datetime.timedelta(hours=4)).strftime('%Y.%m.%d %H:%M:%S')
     st.info(f'Всего **{len(data)}** строк, aктуальность локального датасета **{last_modified}**')
 except:
