@@ -7,10 +7,10 @@ import os
 import numpy as np
 import sg_lib
 
-import subprocess
-subprocess.run(['pip', 'install', 'xlrd']) 
-subprocess.run(['pip', 'install', 'xlwt']) 
-subprocess.run(['pip', 'install', 'openpyxl']) 
+#import subprocess
+#subprocess.run(['pip', 'install', 'xlrd']) 
+#subprocess.run(['pip', 'install', 'xlwt']) 
+#subprocess.run(['pip', 'install', 'openpyxl']) 
 #pip install xlrd xlwt 
 #import xlrd
 
