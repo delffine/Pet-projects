@@ -18,5 +18,3 @@ textColor = 'black'
 # Font family for all text in the app, except code blocks. One of "sans serif",
 # "serif", or "monospace".
 font = 'sans serif'
-
-#sidebar = {'backgroundColor': '#FFFFFF', 'contrast': 1.2 }
