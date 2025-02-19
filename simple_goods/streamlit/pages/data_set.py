@@ -6,13 +6,11 @@ import calendar
 import os
 import numpy as np
 import sg_lib
-
+import openpyxl
 
 
 def load_rawdata():
     rawdt = pd.DataFrame([])
-#   path = 'd:/newwork/-=simple_goods=-/data/'
-#    path = 'data/'
     
     app_dir = os.path.dirname(os.path.realpath(__file__)).replace('\\', '/')
     path = os.path.dirname(app_dir.rstrip('/')) + '/data/'
@@ -20,13 +18,12 @@ def load_rawdata():
     pv = 0
     all = 0
     l = 0
-    prbar = st.progress(0, text='Начинаю загрузку данны...')
-    #data_load_state = st.text('') 
-    #st.text('Начинаю загрузку данны...')
+    prbar = st.progress(0, text=f'Начинаю загрузку данны из {path}')
 
     for ff in os.listdir(path):
         if ff.split('.')[1] == 'xls':
-            dd = pd.read_excel(path + ff)
+            prbar.progress(pv, f'Загрузка из файла {ff}')
+            dd = pd.read_excel(path + ff, engine='openpyxl')
             dd['file'] = ff
             l = len(dd)
             all = all + l
@@ -71,10 +68,10 @@ def load_rawdata():
         if str(u) == u :
             i +=1
             user_dic[u] = f'user_{i:04.0f}'
-    #замена индификатора пользователей по словарю
+    #замена индификатора донаторов по словарю
     rawdt['user_id'] = rawdt['user_mail'].replace(user_dic)
     pv +=10
-    prbar.progress(pv, 'замена индификатора пользователей по словарю')
+    prbar.progress(pv, 'Замена индификатора донаторов по словарю')
 
     #Создаем новые результирующие / преобразованные колонки
     rawdt['status'] = rawdt['Статус операции'].replace({'Completed' : 'Завершена', 'Declined' : 'Отклонена'} )
@@ -146,58 +143,64 @@ def load_rawdata():
 
 
     
-    
+#---------------------------------------------------------------
+#------------------- Шапка с меню датасетов --------------------
+#---------------------------------------------------------------      
 sg_lib.header()
+
+#---------------------------------------------------------------
+#------------------------ Загрукза датасетов -------------------
+#--------------------------------------------------------------- 
 data = sg_lib.loaddata()
 
-st.header('Загруженные данные')
-try:
-    modification_time = os.path.getmtime('data/sg_data.csv')
-    last_modified = (pd.to_datetime(modification_time, unit='s') + datetime.timedelta(hours=4)).strftime('%Y.%m.%d %H:%M:%S')
-    st.info(f'Всего **{len(data)}** строк, aктуальность локального датасета **{last_modified}**')
-except:
-    st.error(f'Нет локального файла CSV с данными!')
-    
-
-        
-st.text('Пример данных')
-st.dataframe(data.sample(10))
-
-col1, col2, col3 = st.columns(3)
-
-with col1:
-        
-    uploaded_files = st.file_uploader("Загрузить исходные данные", type='xls', accept_multiple_files = True)
-    fc = len(uploaded_files)
-    i = 0    
-    if fc > 0:
-        prbar = st.progress(0, '')
+#---------------------------------------------------------------
+# ----------------- Основной блок башборда ---------------------          
+#---------------------------------------------------------------
+mainblok = st.container()
+with mainblok:
+    st.header('Загруженные данные')
+    try:
         app_dir = os.path.dirname(os.path.realpath(__file__)).replace('\\', '/')
-        data_dir = os.path.dirname(app_dir.rstrip('/')) + '/data/'
+        path = os.path.dirname(app_dir.rstrip('/')) + '/data/'
+        modification_time = os.path.getmtime(path+'sg_data.csv')
+        last_modified = (pd.to_datetime(modification_time, unit='s') + datetime.timedelta(hours=4)).strftime('%Y.%m.%d %H:%M:%S')
+        st.info(f'Всего **{len(data)}** строк, aктуальность локального датасета **{last_modified}**')
+    except:
+        st.error(f'Нет локального файла CSV с данными!')
+            
+    st.text('Пример данных')
+    st.dataframe(data.sample(10))
 
-        for uploaded_file in uploaded_files:
-            if not os.path.isdir(data_dir):
-                os.mkdir(data_dir)
-                
-            file_path = data_dir+uploaded_file.name
-            with open(file_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            if os.path.exists(file_path): 
-                prbar.progress((i / fc), f'Файл {uploaded_file.name} загружен!')
-            else:
-                st.text(f'Файл {uploaded_file.name} НЕ загружен!')
-            i +=1
-        prbar.empty()
-        if i == fc: 
-            st.success(f'{i} файлов загружено в {data_dir}!\nМожно пересоздавать локальный датасет')
-        else:  
-            st.error(f'НЕ все файлы загружены')  
-with col3:        
-    if st.button('Пересоздать локальный датасет', type="primary"):
-        load_rawdata()
-        
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        uploaded_files = st.file_uploader("Загрузить исходные данные", type='xls', accept_multiple_files = True)
+        fc = len(uploaded_files)
+        i = 0    
+        if fc > 0:
+            prbar = st.progress(0, '')
+            app_dir = os.path.dirname(os.path.realpath(__file__)).replace('\\', '/')
+            data_dir = os.path.dirname(app_dir.rstrip('/')) + '/data/'
 
-st.text(f' \n \n \n ')
-
+            for uploaded_file in uploaded_files:
+                if not os.path.isdir(data_dir):
+                    os.mkdir(data_dir)
+                    
+                file_path = data_dir+uploaded_file.name
+                with open(file_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                if os.path.exists(file_path): 
+                    prbar.progress((i / fc), f'Файл {uploaded_file.name} загружен!')
+                else:
+                    st.text(f'Файл {uploaded_file.name} НЕ загружен!')
+                i +=1
+            prbar.empty()
+            if i == fc: 
+                st.success(f'{i} файлов загружено в {data_dir}!\nМожно пересоздавать локальный датасет')
+            else:  
+                st.error(f'НЕ все файлы загружены')  
+    with col3:        
+        if st.button('Пересоздать локальный датасет', type="primary"):
+            load_rawdata()
+            
+# ----------------- Подвал дашборда ---------------------  
 sg_lib.footer()
-

@@ -6,19 +6,49 @@ import numpy as np
 import altair as alt
 import sg_lib
     
-
+#---------------------------------------------------------------    
+#----------- Треугольная табилца динамики когорт ---------------    
+#---------------------------------------------------------------      
+def corogt_alt(dd, xcol, ycol, valcol, pr=0):
+    base = alt.Chart(dd).encode(
+        x=alt.Y(xcol, title='Когорта', sort=None, axis=alt.Axis(labelAngle=0)),
+        y=alt.Y(ycol, sort='y', title='Месяц жизни'),
+        tooltip=alt.Text(valcol+':Q', format=f'.{pr}f')
+        ).properties(
+        width=600, height=400,
+        )    
+    
+    heatmap = base.mark_rect().encode(
+    alt.Color(valcol+':Q')
+        .scale(scheme="redyellowgreen")
+        .legend(None)
+    )
+    if (pr==0) & (dd[valcol].mean() < 1): pr=2
+    text = base.mark_text(baseline="middle").encode(
+        text=alt.Text(valcol+':Q', format=f'.{pr}f'),
+        color=alt.value("white"),
+    )
+    st.write(heatmap + text)
+    return  
+    
+#---------------------------------------------------------------
+#------------------- Шапка с меню датасетов --------------------
+#---------------------------------------------------------------      
 sg_lib.header()  
+
+#---------------------------------------------------------------
+#------------------------ Загрукза датасетов -------------------
+#--------------------------------------------------------------- 
 data = sg_lib.loaddata()
 data = data.query('status == "Завершена"').reset_index(drop=False)
 client_table = sg_lib.get_client_table(data)
-
-
-     
-
+    
+#---------------------------------------------------------------
+# ----------------- Основной блок башборда ---------------------          
+#---------------------------------------------------------------
 mainblok = st.container()
 with mainblok:
     prbar = st.progress(0, text='Начинаю вычисления ...')
-    
     
     st.header('Когортный анализ')
     date_filtr = st.container(border=True)
@@ -32,15 +62,9 @@ with mainblok:
     data = data.query('@date_min < tr_date < @date_max')
     client_table = client_table.query('@date_min < first_date < @date_max')
     
-    #data['maxdate'] = data['tr_date'].max() - data['tr_date']
-    #data['maxdate'] = pd.to_timedelta(data['maxdate']).dt.days
-    #data['horizon_month'] = data['maxdate'] // 30
-    #hormax = data['horizon_month'].max()
-
     dd = data.groupby(['user_id']).agg({'oper_sum' : 'sum', 'tr_date' : 'nunique'})
     bigpayers = dd.query('tr_date == 1 & oper_sum > 25000').sort_values(by = 'oper_sum', ascending = False)
-
-    
+   
     col = st.columns(4)
     with col[0]:
         cogort_gorizont = st.number_input('Горизонт анализа', value=7, min_value=3, max_value=7)
@@ -65,7 +89,7 @@ with mainblok:
 
     ch_dynamika = ch_dynamika.reset_index(drop=True)
     
-    par_name = ["Количество платежей", "Количество пользователей", "Средний чек",
+    par_name = ["Количество транзакций", "Количество донаторов", "Средний чек",
             "LTV", "LTV в месяц", "Коэффициент удержания","Коэффициент оттока" ]
     par_col = ['tr_count', 'user_count', 'avg_sum', 'ltv', 'ltv_m', 'rr', 'cr']
     par_len = len(par_col)
@@ -79,18 +103,17 @@ with mainblok:
             col1, col2 = st.columns(2, border=True)
             with col1: 
                 st.text('Табличный вид')
-                sg_lib.corogt_alt(ch_dynamika, 'ch_name:O', 'm_live:O', par_col[i]+':Q', pr=2)
+                corogt_alt(ch_dynamika, 'ch_name:O', 'm_live:O', par_col[i])
                
             with col2: 
                 st.text('Динамика когорт')
                 dd = ch_dynamika.pivot(index='m_live', columns='ch_name', values=par_col[i])
                 st.line_chart(dd, x_label = 'Месяц жизни', y_label = par_name[i])            
         
-
 prbar.empty()
-            
-st.warning('* В когортном анализе не учитываются плательщики, которые сделали разовые платежи >25 тысяч рублей')
-            
-sg_lib.footer()
-        
+
+st.warning('* В когортном анализе не учитываются плательщики, которые сделали разовые транзакции >25 тысяч рублей')
+
+# ----------------- Подвал дашборда ---------------------          
+sg_lib.footer()      
         

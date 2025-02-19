@@ -3,21 +3,24 @@ import pandas as pd
 import datetime
 import calendar
 import numpy as np
-
-#from sg_lib import show_chogort_table_sns, loaddata, get_client_table
 import sg_lib
 
 
-
-# ----------------- Меню и загрукза датасетов ---------------------          
-
+#---------------------------------------------------------------
+#------------------- Шапка с меню датасетов -------------------
+#---------------------------------------------------------------          
 sg_lib.header()
-                
+
+#---------------------------------------------------------------
+#------------------------ Загрукза датасетов -------------------
+#---------------------------------------------------------------          
 data = sg_lib.loaddata()
+#берем только завершенный транзакции
 data = data.query('status == "Завершена"').reset_index(drop=False)
 
-
-# ----------------- Основной блок ---------------------          
+#---------------------------------------------------------------
+# ----------------- Основной блок башборда ---------------------          
+#---------------------------------------------------------------
 mainblok = st.container()
 with mainblok:
     prbar = st.progress(0, text='Начинаю вычисления ...')    
@@ -32,8 +35,8 @@ with mainblok:
         date_max = str(date_range[1])
 
     data = data.query('@date_min < tr_date < @date_max')
-    
-    
+
+    # ------- Сумарные значения ----------    
     allusers = data['user_id'].nunique()
     alltr = data['tr_id'].nunique()
     allsum = data['oper_sum'].sum()
@@ -46,33 +49,33 @@ with mainblok:
     tab1, tab2, tab3 = st.tabs(["Суммарные", "Среднемесячные", "Ежедневные"])
     with tab1:
         prbar.progress(30, text='Сумарные значения')
-    # ------- Сумарные значения ----------
+
         row = st.container()
         with row:    
             col1, col2, col3 = st.columns(3)
             with col1:
                 container = st.container(border=True)
-                container.write(f"Всего пользователей: **{allusers}**")
+                container.write(f"Всего донаторов: **{allusers}**")
             with col2:
                 container = st.container(border=True)
-                container.write(f"Всего транзанкий: **{alltr}**")        
+                container.write(f"Всего транзакций: **{alltr}**")        
             with col3:
                 container = st.container(border=True)
-                container.write(f"Всего доходов: **{allsum:_} р**".replace('_', ' '))
+                container.write(f"Общая сумма транзакций: **{allsum:_} р**".replace('_', ' '))
 
         row = st.container()
         with row:    
             col1, col2 = st.columns(2, border=True)
             with col1:
-                st.markdown('**Пользователи нарастанием**')
-                st.line_chart(day_dynamik['cumuser'], color='#1f77b4', x_label = '', y_label = '')         
+                st.markdown('**Донаторы нарастанием**')
+                st.line_chart(day_dynamik['cumuser'], color='#506788', x_label = '', y_label = '')         
                 
             with col2:
-                st.markdown('**Сумма платежей нарастанием**')
-                st.line_chart(day_dynamik['cumsum'], color='#2ca02c', x_label = '', y_label = '')
+                st.markdown('**Сумма транзакций нарастанием**')
+                st.line_chart(day_dynamik['cumsum'], color='#eb606c', x_label = '', y_label = '')
 
 
-
+    # ------- Среднемесячные значения ----------
     month_dynamik = data.groupby('tr_month').agg({'tr_date' : 'first', 'tr_id' : 'count', 'oper_sum' : 'sum', 'user_id' : 'nunique'})
     month_dynamik['cumsum'] = month_dynamik['oper_sum'].cumsum()
     month_dynamik['cumclient'] = month_dynamik['user_id'].cumsum()
@@ -81,8 +84,7 @@ with mainblok:
     users_month = month_dynamik['user_id'].mean()
     tr_month = month_dynamik['tr_id'].mean()
     sum_month = month_dynamik['oper_sum'].mean()
-    
-    # ------- Среднемесячные значения ----------
+
     with tab2:
         prbar.progress(60, text='Средние значения')
         row = st.container()
@@ -90,61 +92,58 @@ with mainblok:
             col1, col2, col3 = st.columns(3)
             with col1:
                 container = st.container(border=True)
-                container.write(f"Среднее колво пользователей в месяц: **{users_month:.0f}**")
+                container.write(f"Среднее колво донаторов в месяц: **{users_month:.0f}**")
             with col2:
                 container = st.container(border=True)
-                container.write(f"Средняя колво платежей в месяц: **{tr_month:.0f}**") 
+                container.write(f"Средняя колво транзакций в месяц: **{tr_month:.0f}**") 
             with col3:
                 container = st.container(border=True)
-                container.write(f"Средняя сумма платежей в месяц: **{sum_month:_.0f}** р.".replace('_', ' '))  
+                container.write(f"Средняя сумма транзакций в месяц: **{sum_month:_.0f}** р.".replace('_', ' '))  
 
         row = st.container()
         with row:    
             col1, col2 = st.columns(2, border=True)
             with col1:
-                st.markdown('**Плательщики по месяцам**')
-                st.line_chart(month_dynamik, y='user_id', x='tr_date', color='#1f77b4', x_label = '', y_label = '')
+                st.markdown('**Донаторы по месяцам**')
+                st.line_chart(month_dynamik, y='user_id', x='tr_date', color='#506788', x_label = '', y_label = '')
 
             with col2:
-                st.markdown('**Платежи по месяцам**')
-                st.line_chart(month_dynamik, y='oper_sum', x='tr_date', color='#2ca02c', x_label = '', y_label = '')
-                
+                st.markdown('**Транзакции по месяцам**')
+                st.line_chart(month_dynamik, y='oper_sum', x='tr_date', color='#eb606c', x_label = '', y_label = '')
+
+    # ------- Среднедневные значения ----------                 
     daysum = day_dynamik['oper_sum'].mean()
     daytr = day_dynamik['tr_id'].mean()
     dayuser = day_dynamik['user_id'].mean()
-    
-    
+        
     with tab3:
         prbar.progress(90, text='Ежедневные значения')        
-    # ------- Ежедневные значения ----------        
         row = st.container()
         with row:    
             col1, col2, col3 = st.columns(3)
             with col1:
                 container = st.container(border=True)
-                container.write(f"Среднее колво пользователей в день: **{dayuser:.0f}**")
+                container.write(f"Среднее колво донаторов в день: **{dayuser:.0f}**")
             with col2:
                 container = st.container(border=True)
-                container.write(f"Средняя колво платежей в день: **{daytr:.0f}**") 
+                container.write(f"Среднее колво транзакций в день: **{daytr:.0f}**") 
             with col3:
                 container = st.container(border=True)
-                container.write(f"Средняя сумма платежей в день: **{daysum:_.0f}** р.".replace('_', ' '))              
+                container.write(f"Средняя сумма транзакций в день: **{daysum:_.0f}** р.".replace('_', ' '))              
 
         row = st.container()
         with row:    
             col1, col2 = st.columns(2, border=True)
             with col1:
-                st.markdown('**Плательщики по дням**')
-                st.line_chart(day_dynamik['user_id'], color='#1f77b4', x_label = '', y_label = '')      
+                st.markdown('**Донаторы по дням**')
+                st.line_chart(day_dynamik['user_id'], color='#506788', x_label = '', y_label = '')      
 
             with col2:
-                st.markdown('**Платежи по дням**')
-                st.line_chart(day_dynamik['oper_sum'], color='#2ca02c', x_label = '', y_label = '')      
+                st.markdown('**Транзакции по дням**')
+                st.line_chart(day_dynamik['oper_sum'], color='#eb606c', x_label = '', y_label = '')      
                 
     prbar.empty()
 
 
+# ----------------- Подвал дашборда ---------------------          
 sg_lib.footer()
-   
- 
-

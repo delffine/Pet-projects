@@ -6,20 +6,25 @@ import numpy as np
 import sg_lib
 import altair as alt
     
-
+#---------------------------------------------------------------
+#------------------- Шапка с меню датасетов --------------------
+#---------------------------------------------------------------
 sg_lib.header()  
 
-
+#---------------------------------------------------------------
+#------------------------ Загрукза датасетов -------------------
+#---------------------------------------------------------------
 data = sg_lib.loaddata()
 badtr = data.query('status == "Отклонена"').reset_index(drop=False)
 data = data.query('status == "Завершена"').reset_index(drop=False)
-
-     
-
+   
+#---------------------------------------------------------------
+# ----------------- Основной блок башборда ---------------------          
+#---------------------------------------------------------------
 mainblok = st.container()
 with mainblok:
 
-    st.subheader('Платежи')
+    st.subheader('Транзакции')
 
     date_filtr = st.container(border=True)
     with date_filtr:
@@ -30,11 +35,10 @@ with mainblok:
         date_max = str(date_range[1])
 
     data = data.query('@date_min < tr_date < @date_max')
-    #badtr = data.query('@date_min < final_date < @date_max')
-
-    
+  
     
     tab1, tab2 = st.tabs(["Успешные", "Отклоненные"])
+    # ------- Успешные ----------
     with tab1:
         alltr = data['tr_id'].nunique()
         allfinalsum = data['final_sum'].sum()
@@ -43,7 +47,7 @@ with mainblok:
         commisionsum = data['oper_sum'].sum() - data['final_sum'].sum()
         oper_time = (pd.to_datetime(data['final_date']) - data['date']).mean()
         oper_time = round(oper_time.seconds / 3600, 0)
-     # ------- Сумарные значения ----------
+        # ------- Цифровые показатели ----------
         row = st.container()
         with row:    
             col1, col2, col3 = st.columns(3)
@@ -52,7 +56,7 @@ with mainblok:
                 container.write(f"Всего транзанкий: **{alltr}**") 
             with col2:
                 container = st.container(border=True)
-                container.write(f"Медианная сумма платежа: **{mediansum:_.0f} р**".replace('_', ' ')) 
+                container.write(f"Медианная сумма транзакций: **{mediansum:_.0f} р**".replace('_', ' ')) 
             with col3:
                 container = st.container(border=True)
                 container.write(f"Сумма зачислений: **{allfinalsum:_.0f} р**".replace('_', ' '))   
@@ -65,11 +69,13 @@ with mainblok:
 
             with col2:
                 container = st.container(border=True)
-                container.write(f"Средняя сумма платежа: **{meansum:.0f} р**") 
+                container.write(f"Средняя сумма транзакций: **{meansum:.0f} р**") 
             with col3:
                 container = st.container(border=True)
                 container.write(f"Потери на комиссии: **{commisionsum:_.0f} р**".replace('_', ' '))                 
-                
+
+
+        # ------- Диаграммы ----------        
         cols = st.columns(2, border=True)
         with cols[0]:
             dd = data.groupby('type', as_index=False)['tr_id'].count()
@@ -79,7 +85,7 @@ with mainblok:
                 tooltip=["type:N", "tr_id:Q"] 
             ).properties(
                 height=400, width=400,
-                title="Количество транзакций по типам платежа"
+                title="Доли транзакций по типам"
             )
             st.write(pie)
         with cols[1]:
@@ -90,7 +96,7 @@ with mainblok:
                 tooltip=["purpose:N", "tr_id:Q"] 
             ).properties(
                 height=400, width=400,
-                title="Количество транзакций по назначению платежа"
+                title="Доли транзакций по назначению"
             )
             st.write(pie)
 
@@ -101,12 +107,12 @@ with mainblok:
             dd = data.query('oper_sum > @s99')['oper_sum'].value_counts().reset_index()
             big_sum = alt.Chart(dd).mark_bar().encode(
                 y=alt.Y('count', title='Колво'),
-                x=alt.X('oper_sum:O', title='Сумма платежа'),
+                x=alt.X('oper_sum:O', title='Сумма транзакций'),
                 tooltip=('count', 'oper_sum'),
-                color=alt.value('tomato'),  
+                color=alt.value('#eb606c'),  
             ).properties(
                 width=600, height=400,
-                title="Аномально больше суммы (больше 99% платежей)"
+                title="Аномально больше суммы (больше 99% транзакций)"
             )
 
             st.write(big_sum)
@@ -114,21 +120,21 @@ with mainblok:
             dd = data.groupby('oper_sum', as_index=False)['tr_id'].count().sort_values(by='tr_id', ascending=False).head(20)
             bar = alt.Chart(dd).mark_bar().encode(
                     y=alt.Y('tr_id', title='Колво'),
-                    x=alt.X('oper_sum:O', sort='-y', title='Сумма платежа'),
-                    color=alt.value('#2ca02c'),                
+                    x=alt.X('oper_sum:O', sort='-y', title='Сумма транзакций'),
+                    color=alt.value('#a1c5c5'),                
             ).properties(
                 height=400, width=400,
-                title="Наиболее частые суммы платежей"
+                title="Наиболее частые суммы транзакций"
             )
             st.write(bar)
             
-            
+    # ------- Отклоненные ----------            
     with tab2:            
         allbad =  len(badtr)
         badcom = badtr['final_sum'].sum()
         badusers = badtr['user_id'].nunique()
 
-     # ------- Сумарные значения ----------
+        # ------- Цифровые показатели ----------
         row = st.container()
         with row:    
             col1, col2, col3 = st.columns(3)
@@ -137,20 +143,20 @@ with mainblok:
                 container.write(f"Всего отклоненных транзанкий: **{allbad}**") 
             with col2:
                 container = st.container(border=True)
-                container.write(f"Пользователей, получивших отказ: **{badusers:.0f}**") 
+                container.write(f"Донаторов, получивших отказ: **{badusers:.0f}**") 
             with col3:
                 container = st.container(border=True)
                 container.write(f"Потери на коммиссии: **{badcom:_.0f} р**".replace('_', ' ')) 
 
-
+        # ------- Диаграммы ----------
         cols = st.columns(2, border=True)
         with cols[0]:
             dd = badtr.groupby('pay_result', as_index=False)['tr_id'].count().sort_values(by='tr_id', ascending=False).head(20)
             badresult = alt.Chart(dd).mark_bar().encode(
-                x=alt.X('tr_id', title='колво транзакций'),
+                x=alt.X('tr_id', title='Колво транзакций'),
                 y=alt.Y('pay_result:N', sort='-x', title='Причина отказа'),
                 tooltip=('pay_result', 'tr_id'),
-                color=alt.value('red'),
+                color=alt.value('#eb606c'),
             ).properties(
                 width=600, height=400,
                 title="Наиболее частые причины отказа"                
@@ -160,13 +166,13 @@ with mainblok:
         with cols[1]:
             dd = badtr.groupby('pay_system', as_index=False)['tr_id'].count().sort_values(by='tr_id', ascending=False).head(20)
             bad_pay_system = alt.Chart(dd).mark_bar().encode(
-                x=alt.X('tr_id', title='колво транзакций'),
+                x=alt.X('tr_id', title='Колво транзакций'),
                 y=alt.Y('pay_system:N', sort='-x', title='Платежная система'),
                 tooltip=('pay_system', 'tr_id'),
-                color=alt.value('orange'),
+                color=alt.value('#506788'),
             ).properties(
                 width=600, height=400,
-                title="Отказавшщие платежные системы"                    
+                title="Отказавшие платежные системы"                    
             )
             st.write(bad_pay_system)
 
@@ -176,10 +182,10 @@ with mainblok:
         with cols[0]:
             dd = badtr.groupby('pay_bank', as_index=False)['tr_id'].count().sort_values(by='tr_id', ascending=False).head(20)
             bad_bank = alt.Chart(dd).mark_bar().encode(
-                x=alt.X('tr_id', title='колво транзакций'),
+                x=alt.X('tr_id', title='Колво транзакций'),
                 y=alt.Y('pay_bank:N', sort='-x', title='Причина отказа'),
                 tooltip=('pay_bank', 'tr_id'),
-                color=alt.value('green'),
+                color=alt.value('#f2bc62'),
             ).properties(
                 width=600, height=400,
                 title="Отказавшие банки"                   
@@ -189,10 +195,10 @@ with mainblok:
         with cols[1]:
             dd = badtr.groupby('pay_bank_country', as_index=False)['tr_id'].count().sort_values(by='tr_id', ascending=False).head(20)
             bad_country = alt.Chart(dd).mark_bar().encode(
-                x=alt.X('tr_id', title='колво транзакций'),
+                x=alt.X('tr_id', title='Колво транзакций'),
                 y=alt.Y('pay_bank_country:N', sort='-x', title='Платежная система'),
                 tooltip=('pay_bank_country', 'tr_id'),
-                color=alt.value('DodgerBlue'),
+                color=alt.value('#a1c5c5'),
             ).properties(
                 width=600, height=400,
                 title="Страны отказавших банков"   
@@ -200,5 +206,5 @@ with mainblok:
 
             st.write(bad_country)
 
-            
+# ----------------- Подвал дашборда ---------------------              
 sg_lib.footer()
