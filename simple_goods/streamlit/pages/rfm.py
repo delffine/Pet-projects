@@ -1,18 +1,53 @@
 import streamlit as st
 import pandas as pd
-import datetime
-import calendar
-import numpy as np
-import sg_lib
 import io
+import altair as alt
+import sg_lib
 
+
+#---------------------------------------------------------------    
+#------------------- Матрица RFM анализа -----------------------    
+#---------------------------------------------------------------     
+def rfn_alt(dd, valcol):
+    base = alt.Chart(dd).encode(
+    x=alt.X('M:O', title='M', sort=None, axis=alt.Axis(labelAngle=0)),
+    y=alt.Y('RF:O', title='R-F', sort=None),
+    tooltip=alt.Text(valcol, format=f'.0f')
+    ).properties(
+        width=600, height=400,
+    )
+
+    heatmap = base.mark_rect(color='red').encode(
+        alt.Color(valcol)
+            .scale(scheme="redyellowgreen")
+            .legend(None)
+    )
+
+    text = base.mark_text(baseline="middle").encode(
+        text=valcol,
+        color=alt.value("white"),
+    )
+
+    st.write(heatmap + text)
+    return   
+    
+
+#---------------------------------------------------------------
+#------------------- Шапка с меню датасетов --------------------
+#--------------------------------------------------------------- 
 sg_lib.header()
+
+#---------------------------------------------------------------
+#------------------------ Загрукза датасетов -------------------
+#---------------------------------------------------------------
 data = sg_lib.loaddata()
 data = data.query('status == "Завершена"').reset_index(drop=False)
-   
 
+
+#---------------------------------------------------------------
+# ----------------- Основной блок башборда ---------------------          
+#---------------------------------------------------------------
 mainblok = st.container()
-
 with mainblok:
     prbar = st.progress(0, text='Начинаю вычисления ...')
     
@@ -32,11 +67,11 @@ with mainblok:
     with rfm_filtr:
         col = st.columns(3)
         with col[0]:
-            lastdate_range = st.slider("Границы рангов дней с последней оплаты", 10, 180, (30, 90))
+            lastdate_range = st.slider("Границы рангов дней с последнего действия", 10, 180, (30, 90))
         with col[1]:
-            freq_range = st.slider("Границы рангов частоты платежей", 0.5, 5.0, (0.99, 2.0))
+            freq_range = st.slider("Границы рангов частоты транзакций", 0.5, 5.0, (0.99, 2.0))
         with col[2]:
-            sum_range = st.slider("Границы рангов сумм платежей", 100, 5000, (400, 1400))
+            sum_range = st.slider("Границы рангов сумм транзакций", 100, 5000, (400, 1400))
     
     client_table = sg_lib.get_client_table(data, 
             r1=lastdate_range[0], r2=lastdate_range[1], 
@@ -56,40 +91,34 @@ with mainblok:
 
     col1, col2 = st.columns(2, border=True)
     with col1:
-        st.text('Количество пользователей')
+        st.text('Количество донаторов')
         sg_lib.rfn_alt(rfm_table, 'rfm_users:Q')
     prbar.progress(40, text='')        
     with col2:
-        st.text('Сумма платежей')
+        st.text('Сумма транзакций')
         sg_lib.rfn_alt(rfm_table, 'rfm_sum:Q')
 
     prbar.progress(60, text='')
 
     col1, col2 = st.columns(2, border=True)
     with col1:
-        st.text('Количество платежей')
-        sg_lib.rfn_alt(rfm_table, 'rfm_tr:Q')
+        st.text('Количество транзакций')
+        rfn_alt(rfm_table, 'rfm_tr:Q')
     prbar.progress(80, text='')        
     with col2:
         st.text('Средний чек')
-        sg_lib.rfn_alt(rfm_table, 'avg_sum:Q')
+        rfn_alt(rfm_table, 'avg_sum:Q')
         
-    #st.table(rfm_table[['RFM', 'R', 'F', 'M', 'rfm_users', 'rfm_tr', 'rfm_sum']])
-
     st.header('RFM таблица')
     st.data_editor(rfm_table[['RFM', 'R', 'F', 'M', 'rfm_users', 'rfm_tr', 'rfm_sum', 'avg_sum']],
        column_config={
            "R": st.column_config.TextColumn("Давность"),
            "F": st.column_config.TextColumn("Частота"),
            "M": st.column_config.TextColumn("Сумма"),
-           "rfm_users": st.column_config.NumberColumn("Колво_пользовтелей"),
-           #"rfm_tr": st.column_config.TextColumn("Колво платежей"),
-           #"rfm_sum": st.column_config.TextColumn("Общая сумма"),
-           #"avg_sum": st.column_config.TextColumn("Средний чек"),
-    #       "rfm_users": st.column_config.ProgressColumn("Пользователей", format="%d", max_value = rfm_table["rfm_users"].max()),
-    #       "rfm_tr": st.column_config.ProgressColumn("Платежей", format="%d", max_value = rfm_table['rfm_tr'].max()),
-    #       "rfm_sum": st.column_config.ProgressColumn("Общая сумма", format="%d", max_value = rfm_table['rfm_sum'].max()),
-    #       "avg_sum": st.column_config.ProgressColumn("Средний чек", format="%d", max_value = rfm_table['avg_sum'].max()),
+           "rfm_users": st.column_config.NumberColumn("Колво донаторов"),
+           "rfm_tr": st.column_config.NumberColumn("Колво транзакций"),
+           "rfm_sum": st.column_config.NumberColumn("Общая сумма"),
+           "avg_sum": st.column_config.NumberColumn("Средний донат"),
        },
        use_container_width=True,
        hide_index=True,
@@ -99,16 +128,16 @@ with mainblok:
 
     st.warning('* Ранги RFM: 1 - отлично, 2 - хорошо, 3 - плохо')
 
-
-    #client_table
     download_rfm = client_table.reset_index()[['RFM', 'user_id', 'user_mail', 'first_date', 'last_date', 'oper_count', 'oper_sum']].copy()
     download_rfm['first_date'] = download_rfm['first_date'].dt.date
     download_rfm['last_date'] = download_rfm['last_date'].dt.date
-    download_rfm.columns = ['RFM', 'id пользователя', 'mail пользователя', 'Первая дата', 'Последняя датa', 'Колво платежей', 'Сумма платежей']
+    download_rfm.columns = ['RFM', 'id пользователя', 'mail пользователя', 'Первая дата', 'Последняя датa', 'Колво транзакций', 'Сумма донатов']
     buffer = io.BytesIO()
     download_rfm.to_excel(buffer, index=False)
-    st.download_button('Скачать RFM таблицу пользователей', buffer, file_name='sg_users_rfm.xlsx', type="primary")
+    st.download_button('Скачать RFM таблицу донаторов', buffer, file_name='sg_users_rfm.xlsx', type="primary")
+   
+    prbar.empty()   
 
-    prbar.empty()    
     
+# ----------------- Подвал дашборда ---------------------  
 sg_lib.footer()

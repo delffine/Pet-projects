@@ -20,29 +20,16 @@ tab_olive = '#bcbd22'
 tab_cyan = '#17becf'
 # -------------------------------
 
-
+#---------------------------------------------------------------    
+#----- Шапка дашборда с меню ------
+#---------------------------------------------------------------    
 def header():
     st.set_page_config(
     layout='wide',
     page_title='Дашборд АНО «Простые вещи»',
     initial_sidebar_state = 'collapsed',
     )
-#    st.cache_resource.clear()
-#    py_pages = {
-#        "Разделы": [
-#            st.Page("sg_main.py", title="Основные показатели"),
-#            st.Page("pages/users.py", title="Пользователи"),
-#            st.Page("pages/orders.py", title="Платежи"),
-#            st.Page("pages/rfm.py", title="RFM анализ"),
-#            st.Page("pages/cogort.py", title="Когортный анализ"),
-#            st.Page("pages/data_set.py", title="Данные"),
-#        ],  
-#    }
-#    st.navigation(py_pages)
-#    pg = st.navigation(py_pages)
-#    pg.run()
-    
-    
+   
     st.header('Аналитическая панель инклюзивных мастерских «Простые вещи»')    
     header = st.container(border=True)
     with header:
@@ -55,37 +42,31 @@ def header():
                 #st.page_link(script[i], label=menu[i], use_container_width=True)                
                 if st.button(menu[i], type="primary", use_container_width=True):
                     st.switch_page(script[i])
-
-
     return            
-                
+
+#---------------------------------------------------------------    
+#----- Подвал дашборда с копирайтом ------                
+#---------------------------------------------------------------    
 def footer():
     footer = st.container(border=True)
     with footer:
-        f1, f2 = st.columns(2)
-        with f1:
+        f = st.columns(4)
+        with f[0]:
             st.page_link("pages/data_set.py", label="Данные")
-        with f2:
+        with f[3]:
+            st.html('<a href="https://github.com/delffine/Pet-projects/tree/main/simple_goods">Создал Суетов Антон =)</a>')
+    return            
 
-            st.text('Создал Суетов Антон =)')
-        
-
-
-
-    
-
+#---------------------------------------------------------------    
+#------------------------ Загрузка данных ----------------------
+#---------------------------------------------------------------    
 def loaddata():
-    #path = 'data/sg_data.csv'
-    #data = pd.read_csv('data/sg_data.csv')
-
     app_dir = os.path.dirname(os.path.realpath(__file__)).replace('\\', '/')
     data_path = app_dir + '/data/sg_data.csv'
     
     try:
         data = pd.read_csv(data_path)
     except:
-        #data = pd.read_csv('data/sg_data.csv')
-        #st.markdown(f'<p style="background-color:#FF0000;color:#FFFFFF;padding:5px;">Нет локальных данных! Читаю данные с Гугл диска!</p>', unsafe_allow_html=True)
         st.warning('Нет локальных данных! Читаю данные с Гугл диска!')
         url='https://drive.google.com/file/d/19IKilgchEDr-Qk2TJzv-0CRA9Snx3sN6/view?usp=drive_link'
         url='https://drive.google.com/uc?id=' + url.split('/')[-2]
@@ -95,8 +76,18 @@ def loaddata():
 
     return data
 
-
+#---------------------------------------------------------------    
+#----------- Формирование таблицы пользователей ----------------    
+#---------------------------------------------------------------    
 def get_client_table(data, r1=30, r2=90, f1=0.99, f2=2, m1=400, m2=1400):
+    """
+    data - входная таблица пользователей
+    r - дни с последнего действия
+    f - частота действий в месяц
+    m - сумма транзакций 
+    r1, f1, m1 - первая граница рангов
+    r2, f2, m2 - вторая граница рангов
+    """
 
     dd = data.groupby(['user_id']).agg({'oper_sum' : 'sum', 'tr_date' : 'nunique'})
     bigpayers = dd.query('tr_date == 1 & oper_sum > 25000').sort_values(by = 'oper_sum', ascending = False)
@@ -117,6 +108,7 @@ def get_client_table(data, r1=30, r2=90, f1=0.99, f2=2, m1=400, m2=1400):
     client_table['day_last'] = client_table['last_date'].apply(lambda x: pd.to_datetime(maxdate) - x)
     client_table['day_last'] = client_table['day_last'].dt.days    
     
+    # Ранги 1 - отлично, 2 - хорошо, 3 - плохо
     client_table['R'] = client_table['day_last'].apply(lambda x: '1' if x < r1 else ('2' if x < r2 else '3'))
     client_table['F'] = client_table['oper_frec'].apply(lambda x: '1' if x > f2 else ('2' if x > f1 else '3'))
     client_table['M'] = client_table['oper_sum'].apply(lambda x: '1' if x > m2 else ('2' if x > m1 else '3'))
@@ -124,7 +116,9 @@ def get_client_table(data, r1=30, r2=90, f1=0.99, f2=2, m1=400, m2=1400):
     
     return client_table
 
-    
+#---------------------------------------------------------------    
+#----------- Треугольная табилца динамики когорт ---------------    
+#---------------------------------------------------------------      
 def corogt_alt(dd, xcol, ycol, valcol, pr=0):
     base = alt.Chart(dd).encode(
         x=alt.Y(xcol, title='Когорта', sort=None, axis=alt.Axis(labelAngle=0)),
@@ -141,13 +135,15 @@ def corogt_alt(dd, xcol, ycol, valcol, pr=0):
     )
 
     text = base.mark_text(baseline="middle").encode(
-        #text=valcol,
         text=alt.Text(valcol, format=f'.{pr}f'),
         color=alt.value("white"),
     )
     st.write(heatmap + text)
     return      
-    
+
+#---------------------------------------------------------------    
+#------------------- Матрица RFM анализа -----------------------    
+#---------------------------------------------------------------     
 def rfn_alt(dd, valcol):
     base = alt.Chart(dd).encode(
     x=alt.X('M:O', title='M', sort=None, axis=alt.Axis(labelAngle=0)),
