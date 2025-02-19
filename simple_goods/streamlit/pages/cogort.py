@@ -72,7 +72,7 @@ with mainblok:
    
     col = st.columns(4)
     with col[0]:
-        month_horizont = data['month_ago'].max()
+        month_horizont = int(data['month_ago'].max())
         
         cogort_gorizont = st.number_input('Горизонт анализа', value=month_horizont, min_value=3, max_value=month_horizont)
         
