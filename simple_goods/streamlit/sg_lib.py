@@ -33,7 +33,7 @@ def header():
     st.header('Аналитическая панель инклюзивных мастерских «Простые вещи»')    
     header = st.container(border=True)
     with header:
-        menu = ['Основные показатели', 'Пользователи', 'Платежи', 'RFM анализ', 'Когортный анализ']
+        menu = ['Основные показатели', 'Донаторы', 'Транзакции', 'RFM анализ', 'Когортный анализ']
         script = ['sg_main.py', 'pages/users.py', 'pages/orders.py', 'pages/rfm.py', 'pages/cogort.py']
         len_menu = len(menu)
         mm = st.columns(len_menu)
