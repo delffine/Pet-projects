@@ -1,27 +1,11 @@
 import streamlit as st
 import pandas as pd
 import os
-import datetime
-import calendar
-import numpy as np
 import altair as alt
 
 
-#----- Стандартные цвета ------
-tab_blue = '#1f77b4'
-tab_orange = '#ff7f0e'
-tab_green = '#2ca02c'
-tab_red = '#d62728'
-tab_purple = '#9467bd'
-tab_brown = '#8c564b'
-tab_pink = '#e377c2'
-tab_gray = '#7f7f7f'
-tab_olive = '#bcbd22'
-tab_cyan = '#17becf'
-# -------------------------------
-
 #---------------------------------------------------------------    
-#----- Шапка дашборда с меню ------
+#--------------------- Шапка дашборда с меню -------------------
 #---------------------------------------------------------------    
 def header():
     st.set_page_config(
@@ -65,35 +49,59 @@ def loaddata():
     data_path = app_dir + '/data/sg_data.csv'
     
     try:
+        #Сначала пытаемся прочитать данные в локальной папке
         data = pd.read_csv(data_path)
     except:
-        st.warning('Нет локальных данных! Читаю данные с Гугл диска!')
-        url='https://drive.google.com/file/d/19IKilgchEDr-Qk2TJzv-0CRA9Snx3sN6/view?usp=drive_link'
-        url='https://drive.google.com/uc?id=' + url.split('/')[-2]
-        data = pd.read_csv(url)
+        #Иначе пытаемся прочитать файл с гугл.диска       
+        st.warning('Нет локальных данных! Читаю данные с Гугл диска!')       
+        try:
+            url='https://drive.google.com/uc?id=19IKilgchEDr-Qk2TJzv-0CRA9Snx3sN6'
+            data = pd.read_csv(url)
+        except:
+            #Если и гугл.диск не прокатил - фомируем датасет с двумя строчками, чтобы вообще запуститься
+            st.error('Нет файла данных на Гугл диске!')    
+            data = pd.DataFrame(columns=['tr_id', 'date', 'user_id', 'user_mail', 'oper_sum', 'final_sum', 'final_date', 'order_id', 'type', 'purpose', 'status', 'subscr', 'city', 'country', 'pay_system', 'pay_bank', 'pay_bank_country', 'pay_result', 'tr_date', 'tr_week', 'tr_month', 'file'])
+
+            data.loc[0] = [2080468405, '2024-01-31 20:18:00', 'user_0001', '12ost****@mail.ru', 1000, 968.0, '2024-02-01', '', 'Регулярная оплата', 'Не указано', 'Завершена', '', '', '', '', '', '', '', '2024-01-31', 10, 1.0, 'backup']
+            data.loc[1] = [2080468405, '2024-02-13 20:18:00', 'user_0002', 'erter****@mail.ru', 1500, 1200.0, '2024-02-01', '', 'Регулярная оплата', 'Не указано', 'Завершена', '', '', '', '', '', '', '', '2024-02-13', 5, 2.0, 'backup']            
+
 
     data['date'] = pd.to_datetime(data['date'])
-
     return data
+    
+
 
 #---------------------------------------------------------------    
 #----------- Формирование таблицы пользователей ----------------    
 #---------------------------------------------------------------    
 def get_client_table(data, r1=30, r2=90, f1=0.99, f2=2, m1=400, m2=1400):
-    """
-    data - входная таблица пользователей
-    r - дни с последнего действия
-    f - частота действий в месяц
-    m - сумма транзакций 
-    r1, f1, m1 - первая граница рангов
-    r2, f2, m2 - вторая граница рангов
-    """
+    #-----------------------------------------------    
+    #data - входная таблица пользователей
+    #r - дни с последнего действия
+    #f - частота действий в месяц
+    #m - сумма транзакций 
+    #r1, f1, m1 - первая граница рангов
+    #r2, f2, m2 - вторая граница рангов
+    #-----------------------------------------------
 
     dd = data.groupby(['user_id']).agg({'oper_sum' : 'sum', 'tr_date' : 'nunique'})
     bigpayers = dd.query('tr_date == 1 & oper_sum > 25000').sort_values(by = 'oper_sum', ascending = False)
     
-    client_table = data.query('not user_id.isin(@bigpayers.index)').groupby('user_id').agg({'user_mail' : 'first', 'tr_id' : 'count', 'oper_sum' : 'sum', 'date' : ['min', 'max']})
-    client_table.columns = ['user_mail', 'oper_count', 'oper_sum', 'first_date', 'last_date']
+    maxdate = data['date'].max()
+    data['days_ago'] = maxdate - data['date']
+    data['days_ago'] = data['days_ago'].dt.days
+    data['month_ago'] = data['days_ago'] // 30 + 1
+    
+    client_table = data.query('not user_id.isin(@bigpayers.index)').groupby('user_id').agg({
+    'user_mail' : 'first', 
+    'tr_id' : 'count', 
+    'oper_sum' : 'sum', 
+    'date' : ['min', 'max'],
+    'days_ago': 'max',
+    'month_ago': 'max'
+    })
+    
+    client_table.columns = ['user_mail', 'oper_count', 'oper_sum', 'first_date', 'last_date', 'days_ago', 'month_ago']
     client_table['last_date'] = pd.to_datetime(client_table['last_date'])
     client_table['first_date'] = pd.to_datetime(client_table['first_date'])
     
@@ -114,55 +122,4 @@ def get_client_table(data, r1=30, r2=90, f1=0.99, f2=2, m1=400, m2=1400):
     client_table['M'] = client_table['oper_sum'].apply(lambda x: '1' if x > m2 else ('2' if x > m1 else '3'))
     client_table['RFM'] = client_table['R'] + client_table['F'] + client_table['M']
     
-    return client_table
-
-#---------------------------------------------------------------    
-#----------- Треугольная табилца динамики когорт ---------------    
-#---------------------------------------------------------------      
-def corogt_alt(dd, xcol, ycol, valcol, pr=0):
-    base = alt.Chart(dd).encode(
-        x=alt.Y(xcol, title='Когорта', sort=None, axis=alt.Axis(labelAngle=0)),
-        y=alt.Y(ycol, sort='y', title='Месяц жизни'),
-        tooltip=alt.Text(valcol, format=f'.{pr}f')
-        ).properties(
-        width=600, height=400,
-        )    
-    
-    heatmap = base.mark_rect().encode(
-    alt.Color(valcol)
-        .scale(scheme="redyellowgreen")
-        .legend(None)
-    )
-
-    text = base.mark_text(baseline="middle").encode(
-        text=alt.Text(valcol, format=f'.{pr}f'),
-        color=alt.value("white"),
-    )
-    st.write(heatmap + text)
-    return      
-
-#---------------------------------------------------------------    
-#------------------- Матрица RFM анализа -----------------------    
-#---------------------------------------------------------------     
-def rfn_alt(dd, valcol):
-    base = alt.Chart(dd).encode(
-    x=alt.X('M:O', title='M', sort=None, axis=alt.Axis(labelAngle=0)),
-    y=alt.Y('RF:O', title='R-F', sort=None),
-    tooltip=alt.Text(valcol, format=f'.0f')
-    ).properties(
-        width=600, height=400,
-    )
-
-    heatmap = base.mark_rect(color='red').encode(
-        alt.Color(valcol)
-            .scale(scheme="redyellowgreen")
-            .legend(None)
-    )
-
-    text = base.mark_text(baseline="middle").encode(
-        text=valcol,
-        color=alt.value("white"),
-    )
-
-    st.write(heatmap + text)
-    return    
+    return client_table  

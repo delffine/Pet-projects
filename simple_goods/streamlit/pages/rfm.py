@@ -8,7 +8,12 @@ import sg_lib
 #---------------------------------------------------------------    
 #------------------- Матрица RFM анализа -----------------------    
 #---------------------------------------------------------------     
-def rfn_alt(dd, valcol):
+def rfm_alt(dd, valcol):
+    #-----------------------------------------------    
+    #dd - входная RFM таблица
+    #valcol - колонка целевой переменной
+    #-----------------------------------------------
+    
     base = alt.Chart(dd).encode(
     x=alt.X('M:O', title='M', sort=None, axis=alt.Axis(labelAngle=0)),
     y=alt.Y('RF:O', title='R-F', sort=None),
@@ -77,7 +82,11 @@ with mainblok:
             r1=lastdate_range[0], r2=lastdate_range[1], 
             f1=freq_range[0], f2=freq_range[1],            
             m1=sum_range[0], m2=sum_range[1])
-    
+
+    #--------------------------------------------------------
+    #Построение RFM таблицы по заданным границам рангов
+    #Ранги 1 - отлично, 2 - хорошо, 3 - плохо
+    #--------------------------------------------------------
     rfm_table = client_table.groupby(['R', 'F', 'M'], as_index = False).agg({'RFM' : 'first', 'oper_count' : ['count', 'sum'], 'oper_sum' : 'sum'})
     rfm_table.columns = ['R', 'F', 'M', 'RFM', 'rfm_users', 'rfm_tr', 'rfm_sum']    
     rfm_table['R'] = rfm_table['R'].replace({'1':'Недавние', '2' : 'Спящие', '3': 'Уходящие'})
@@ -92,22 +101,22 @@ with mainblok:
     col1, col2 = st.columns(2, border=True)
     with col1:
         st.text('Количество донаторов')
-        sg_lib.rfn_alt(rfm_table, 'rfm_users:Q')
+        rfm_alt(rfm_table, 'rfm_users:Q')
     prbar.progress(40, text='')        
     with col2:
         st.text('Сумма транзакций')
-        sg_lib.rfn_alt(rfm_table, 'rfm_sum:Q')
+        rfm_alt(rfm_table, 'rfm_sum:Q')
 
     prbar.progress(60, text='')
 
     col1, col2 = st.columns(2, border=True)
     with col1:
         st.text('Количество транзакций')
-        rfn_alt(rfm_table, 'rfm_tr:Q')
+        rfm_alt(rfm_table, 'rfm_tr:Q')
     prbar.progress(80, text='')        
     with col2:
         st.text('Средний чек')
-        rfn_alt(rfm_table, 'avg_sum:Q')
+        rfm_alt(rfm_table, 'avg_sum:Q')
         
     st.header('RFM таблица')
     st.data_editor(rfm_table[['RFM', 'R', 'F', 'M', 'rfm_users', 'rfm_tr', 'rfm_sum', 'avg_sum']],
