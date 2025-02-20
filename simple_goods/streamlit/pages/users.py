@@ -13,7 +13,7 @@ sg_lib.header()
 #---------------------------------------------------------------  
 data = sg_lib.loaddata()
 data = data.query('status == "Завершена"').reset_index(drop=False)
-client_table = sg_lib.get_client_table(data)
+#client_table = sg_lib.get_client_table(data)
      
 #---------------------------------------------------------------
 # ----------------- Основной блок башборда ---------------------          
@@ -33,7 +33,7 @@ with mainblok:
         date_max = str(date_range[1])
 
     data = data.query('@date_min <= tr_date <= @date_max')
-    
+    client_table = sg_lib.get_client_table(data)
     
     
     tab = st.tabs(["Все пользователи", "Подписчики / Покупатели", "Динамика подписок / Покупок"])
