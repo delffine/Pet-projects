@@ -65,10 +65,10 @@ def load_rawdata():
         if str(u) == u :
             i +=1
             user_dic[u] = f'user_{i:04.0f}'
-    #замена индификатора донаторов по словарю
+    #замена индификатора пользователей по словарю
     rawdt['user_id'] = rawdt['user_mail'].replace(user_dic)
     pv +=10
-    prbar.progress(pv, 'Замена индификатора донаторов по словарю')
+    prbar.progress(pv, 'Замена индификатора пользователей по словарю')
 
     #Создаем новые результирующие / преобразованные колонки
     rawdt['status'] = rawdt['Статус операции'].replace({'Completed' : 'Завершена', 'Declined' : 'Отклонена'} )
@@ -81,7 +81,7 @@ def load_rawdata():
     
     #колонки с днем, неделью и месяцем транзакции
     rawdt['tr_date'] = rawdt['date'].dt.date
-    #rawdt['tr_week'] = rawdt['date'].dt.isocalendar().week
+    rawdt['tr_week'] = rawdt['date'].dt.isocalendar().week
     rawdt['tr_month'] = rawdt['date'].dt.month
     
     maxdate = rawdt['date'].max()
@@ -140,7 +140,7 @@ def load_rawdata():
             'order_id', 'type',  'purpose', 'status', 
             'subscr', 'city', 'country', 
             'pay_system', 'pay_bank', 'pay_bank_country', 'pay_result', 
-            'tr_date', 'tr_month', 'days_ago', 'month_ago', 'file']].to_csv(path+'sg_data.csv', index=False)
+            'tr_date', 'tr_month', 'tr_week', 'days_ago', 'month_ago', 'file']].to_csv(path+'sg_data.csv', index=False)
     prbar.empty()
     return data
 

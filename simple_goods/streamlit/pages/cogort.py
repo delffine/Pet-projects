@@ -65,7 +65,6 @@ with mainblok:
         date_max = str(date_range[1])
 
     data = data.query('@date_min <= tr_date <= @date_max')
-    #client_table = client_table.query('@date_min < first_date < @date_max')
     client_table = sg_lib.get_client_table(data)    
     dd = data.groupby(['user_id']).agg({'oper_sum' : 'sum', 'tr_date' : 'nunique'})
     bigpayers = dd.query('tr_date == 1 & oper_sum > 25000').sort_values(by = 'oper_sum', ascending = False)
@@ -75,31 +74,11 @@ with mainblok:
         month_horizont = int(data['month_ago'].max())
         
         cogort_gorizont = st.number_input('Горизонт анализа', value=month_horizont, min_value=3, max_value=month_horizont)
-        
-        
-        #max_month = int(data['tr_month'].max())
-        #ch_dynamika = pd.DataFrame([])
-        #for c in range(max_month - cogort_gorizont+1, max_month+1):
-        #    ch = set(client_table.query('first_month == @c and not user_id.isin(@bigpayers)').index)
-        #    dd = data.query('user_id.isin(@ch)').groupby('tr_month', as_index = False)\
-        #                .agg({'tr_id' : 'count', 'user_id' : 'nunique', 'oper_sum' : 'sum'})
-        #    dd = dd.rename(columns = {'tr_id' : 'tr_count', 'user_id' : 'user_count'})
-        #   dd['ch'] = c
-        #   dd['ch_name'] = f'{calendar.month_abbr[c]}'
-        #    dd['avg_sum'] = dd['oper_sum'] / dd['tr_count']    
-        #    dd['m_live'] = dd['tr_month'] - c + 1
-        #    dd['ltv'] = dd['oper_sum'].cumsum() / len(ch)
-        #    dd['ltv_m'] = dd['oper_sum'].cumsum() / (len(ch) * dd['m_live'])
-        #    dd['rr'] = dd['user_count'] / len(ch)
-        #    dd['cr'] = dd['user_count'] / dd['user_count'].shift(1)
-        #    ch_dynamika = pd.concat([ch_dynamika, dd])
-        #ch_dynamika = ch_dynamika.reset_index(drop=True)
-    
+  
     ch_dynamika = pd.DataFrame([])
-    #month_horizont = data['month_ago'].max()
     for c in range(1, cogort_gorizont+1):
 
-        ch = set(client_table.query('month_ago == @c and not user_id.isin(@bigpayers)').index)
+        ch = set(client_table.query('month_ago == @c and not user_id.isin(@bigpayers)')['user_id'])
         dd = data.query('user_id.isin(@ch)').groupby('month_ago', as_index = False)\
                     .agg({'tr_id' : 'count', 'user_id' : 'nunique', 'oper_sum' : 'sum'})
         dd = dd.rename(columns = {'tr_id' : 'tr_count', 'user_id' : 'user_count'}).sort_values(by='month_ago', ascending=False)
@@ -118,7 +97,7 @@ with mainblok:
       
     
     
-    par_name = ["Количество транзакций", "Количество донаторов", "Средний чек",
+    par_name = ["Количество транзакций", "Количество пользователей", "Средний чек",
             "LTV", "LTV в месяц", "Коэффициент удержания","Коэффициент оттока" , 'Таблица когорт']
     par_col = ['tr_count', 'user_count', 'avg_sum', 'ltv', 'ltv_m', 'rr', 'cr', 'table']
     par_len = len(par_col)

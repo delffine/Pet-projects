@@ -17,7 +17,7 @@ def header():
     st.header('Аналитическая панель инклюзивных мастерских «Простые вещи»')    
     header = st.container(border=True)
     with header:
-        menu = ['Основные показатели', 'Донаторы', 'Транзакции', 'RFM анализ', 'Когортный анализ']
+        menu = ['Основные показатели', 'Пользователи', 'Транзакции', 'RFM анализ', 'Когортный анализ']
         script = ['sg_main.py', 'pages/users.py', 'pages/orders.py', 'pages/rfm.py', 'pages/cogort.py']
         len_menu = len(menu)
         mm = st.columns(len_menu)
@@ -84,15 +84,24 @@ def get_client_table(data, r1=30, r2=90, f1=0.99, f2=2, m1=400, m2=1400):
     #r2, f2, m2 - вторая граница рангов
     #-----------------------------------------------
 
-    dd = data.groupby(['user_id']).agg({'oper_sum' : 'sum', 'tr_date' : 'nunique'})
-    bigpayers = dd.query('tr_date == 1 & oper_sum > 25000').sort_values(by = 'oper_sum', ascending = False)
+    #dd = data.groupby(['user_id']).agg({'oper_sum' : 'sum', 'tr_date' : 'nunique'})
+    #bigpayers = dd.query('tr_date == 1 & oper_sum > 25000').sort_values(by = 'oper_sum', ascending = False)
     
+    # Признаки покупателя / подписчика
+    ch_byers = data.query('type=="Покупка"')['user_id'].unique()
+    ch_subscr = data.query('subscr.notna()')['user_id'].unique()
+    #ch_byers_subsr = list(set(byers) & set(subscibers))
+    #№ch_notbyeer_notsub = list(set(data['user_id'].unique()) - set(byers) - set(subscibers))
+
+
+
     maxdate = data['date'].max()
     data['days_ago'] = maxdate - data['date']
     data['days_ago'] = data['days_ago'].dt.days
     data['month_ago'] = data['days_ago'] // 30 + 1
     
-    client_table = data.query('not user_id.isin(@bigpayers.index)').groupby('user_id').agg({
+    #client_table = data.query('not user_id.isin(@bigpayers.index)').groupby('user_id').agg({
+    client_table = data.groupby('user_id', as_index=False).agg({
     'user_mail' : 'first', 
     'tr_id' : 'count', 
     'oper_sum' : 'sum', 
@@ -101,7 +110,7 @@ def get_client_table(data, r1=30, r2=90, f1=0.99, f2=2, m1=400, m2=1400):
     'month_ago': 'max'
     })
     
-    client_table.columns = ['user_mail', 'oper_count', 'oper_sum', 'first_date', 'last_date', 'days_ago', 'month_ago']
+    client_table.columns = ['user_id', 'user_mail', 'oper_count', 'oper_sum', 'first_date', 'last_date', 'days_ago', 'month_ago']
     client_table['last_date'] = pd.to_datetime(client_table['last_date'])
     client_table['first_date'] = pd.to_datetime(client_table['first_date'])
     
@@ -121,5 +130,10 @@ def get_client_table(data, r1=30, r2=90, f1=0.99, f2=2, m1=400, m2=1400):
     client_table['F'] = client_table['oper_frec'].apply(lambda x: '1' if x > f2 else ('2' if x > f1 else '3'))
     client_table['M'] = client_table['oper_sum'].apply(lambda x: '1' if x > m2 else ('2' if x > m1 else '3'))
     client_table['RFM'] = client_table['R'] + client_table['F'] + client_table['M']
+    
+    # Покупатели / подписчики
+    client_table['byer'] = client_table['user_id'].apply(lambda x: 'Покупатель' if x in ch_byers else '-')
+    client_table['subscr'] = client_table['user_id'].apply(lambda x: 'Подписчик' if x in ch_subscr else '-')
+
     
     return client_table  

@@ -56,7 +56,9 @@ mainblok = st.container()
 with mainblok:
     prbar = st.progress(0, text='Начинаю вычисления ...')
     
-    st.header('FRM анализ')
+
+        
+    st.header('RFM анализ')
     date_filtr = st.container(border=True)
     with date_filtr:
         date_min = pd.to_datetime(data['tr_date']).dt.date.min()
@@ -83,6 +85,11 @@ with mainblok:
             f1=freq_range[0], f2=freq_range[1],            
             m1=sum_range[0], m2=sum_range[1])
 
+    #отфильтровывает пользователей с разовыми аномальными суммами 
+    #dd = data.groupby(['user_id']).agg({'oper_sum' : 'sum', 'tr_date' : 'nunique'})
+    #bigpayers = dd.query('tr_date == 1 & oper_sum > 25000').sort_values(by = 'oper_sum', ascending = False)
+    #client_table = client_table.query('not user_id.isin(@bigpayers.index)')
+
     #--------------------------------------------------------
     #Построение RFM таблицы по заданным границам рангов
     #Ранги 1 - отлично, 2 - хорошо, 3 - плохо
@@ -100,7 +107,7 @@ with mainblok:
 
     col1, col2 = st.columns(2, border=True)
     with col1:
-        st.text('Количество донаторов')
+        st.text('Количество пользователей')
         rfm_alt(rfm_table, 'rfm_users:Q')
     prbar.progress(40, text='')        
     with col2:
@@ -124,10 +131,10 @@ with mainblok:
            "R": st.column_config.TextColumn("Давность"),
            "F": st.column_config.TextColumn("Частота"),
            "M": st.column_config.TextColumn("Сумма"),
-           "rfm_users": st.column_config.NumberColumn("Колво донаторов"),
+           "rfm_users": st.column_config.NumberColumn("Колво пользователей"),
            "rfm_tr": st.column_config.NumberColumn("Колво транзакций"),
            "rfm_sum": st.column_config.NumberColumn("Общая сумма"),
-           "avg_sum": st.column_config.NumberColumn("Средний донат"),
+           "avg_sum": st.column_config.NumberColumn("Средний чек"),
        },
        use_container_width=True,
        hide_index=True,
@@ -137,13 +144,13 @@ with mainblok:
 
     st.warning('* Ранги RFM: 1 - отлично, 2 - хорошо, 3 - плохо')
 
-    download_rfm = client_table.reset_index()[['RFM', 'user_id', 'user_mail', 'first_date', 'last_date', 'oper_count', 'oper_sum']].copy()
+    download_rfm = client_table.reset_index()[['RFM', 'user_id', 'user_mail', 'first_date', 'last_date', 'oper_count', 'oper_sum', 'byer', 'subscr']].copy()
     download_rfm['first_date'] = download_rfm['first_date'].dt.date
     download_rfm['last_date'] = download_rfm['last_date'].dt.date
-    download_rfm.columns = ['RFM', 'id пользователя', 'mail пользователя', 'Первая дата', 'Последняя датa', 'Колво транзакций', 'Сумма донатов']
+    download_rfm.columns = ['RFM', 'id пользователя', 'mail пользователя', 'Первая дата', 'Последняя датa', 'Колво транзакций', 'Сумма транзакций', 'Покупатель', 'Подписчик']
     buffer = io.BytesIO()
     download_rfm.to_excel(buffer, index=False)
-    st.download_button('Скачать RFM таблицу донаторов', buffer, file_name='sg_users_rfm.xlsx', type="primary")
+    st.download_button('Скачать таблицу пользователей с RFM рангами', buffer, file_name='sg_users_rfm.xlsx', type="primary")
    
     prbar.empty()   
 

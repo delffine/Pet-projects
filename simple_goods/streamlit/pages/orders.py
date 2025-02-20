@@ -140,7 +140,7 @@ with mainblok:
                 container.write(f"Всего отклоненных транзанкий: **{allbad}**") 
             with col2:
                 container = st.container(border=True)
-                container.write(f"Донаторов, получивших отказ: **{badusers:.0f}**") 
+                container.write(f"Пользователей, получивших отказ: **{badusers:.0f}**") 
             with col3:
                 container = st.container(border=True)
                 container.write(f"Потери на коммиссии: **{badcom:_.0f} р**".replace('_', ' ')) 
