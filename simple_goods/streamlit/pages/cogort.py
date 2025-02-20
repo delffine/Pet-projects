@@ -64,7 +64,7 @@ with mainblok:
         date_min = str(date_range[0])
         date_max = str(date_range[1])
 
-    data = data.query('@date_min < tr_date < @date_max')
+    data = data.query('@date_min <= tr_date <= @date_max')
     #client_table = client_table.query('@date_min < first_date < @date_max')
     client_table = sg_lib.get_client_table(data)    
     dd = data.groupby(['user_id']).agg({'oper_sum' : 'sum', 'tr_date' : 'nunique'})
@@ -72,7 +72,7 @@ with mainblok:
    
     col = st.columns(4)
     with col[0]:
-        month_horizont = data['month_ago'].max()
+        month_horizont = int(data['month_ago'].max())
         
         cogort_gorizont = st.number_input('Горизонт анализа', value=month_horizont, min_value=3, max_value=month_horizont)
         
@@ -119,7 +119,7 @@ with mainblok:
     
     
     par_name = ["Количество транзакций", "Количество донаторов", "Средний чек",
-            "LTV", "LTV в месяц", "Коэффициент удержания","Коэффициент оттока" , 'Таблица когортного анализа']
+            "LTV", "LTV в месяц", "Коэффициент удержания","Коэффициент оттока" , 'Таблица когорт']
     par_col = ['tr_count', 'user_count', 'avg_sum', 'ltv', 'ltv_m', 'rr', 'cr', 'table']
     par_len = len(par_col)
  

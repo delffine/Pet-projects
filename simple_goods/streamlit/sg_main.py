@@ -31,7 +31,7 @@ with mainblok:
         date_min = str(date_range[0])
         date_max = str(date_range[1])
 
-    data = data.query('@date_min < tr_date < @date_max')
+    data = data.query('@date_min <= tr_date <= @date_max')
 
     # ------- Сумарные значения ----------    
     allusers = data['user_id'].nunique()

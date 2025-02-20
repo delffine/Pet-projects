@@ -26,16 +26,11 @@ def load_rawdata():
             rawdt = pd.concat([rawdt, dd])
             pv +=5
             prbar.progress(pv, f'Загрузка {l} строк данных из файла {ff}')
-    #pv +=10
-    #prbar.progress(pv, f'Всего загружено {all} строк данных') 
     
     #Проверяем дубликаты в колючевых колонках - номер транзакции
     dub_tr_id = rawdt['Номер'].duplicated().sum()
-
-
     #если есть дубликаты (скорее всего экспортировались одинаковые файлы) - удаляем дублирвоанные строчки
     if dub_tr_id > 0: rawdt = rawdt.drop_duplicates(subset='Номер').reset_index(drop=True)
-
     
     #удаляем колонки, в которых нет значений
     na_col = []
@@ -78,6 +73,7 @@ def load_rawdata():
     #Создаем новые результирующие / преобразованные колонки
     rawdt['status'] = rawdt['Статус операции'].replace({'Completed' : 'Завершена', 'Declined' : 'Отклонена'} )
     rawdt['purpose'] = rawdt['Назначение платежа'].str.lower().str.replace('&quot;' , '"')
+    rawdt['Тип'] = rawdt['Тип'].replace('Оплата', 'Покупка')
     rawdt['date'] = pd.to_datetime(rawdt['Дата и время'], format = '%Y-%m-%d %H:%M:$S', errors = 'coerce')
 
     #заменяем пропуски в назначении и типе платежа

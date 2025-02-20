@@ -32,48 +32,46 @@ with mainblok:
         date_min = str(date_range[0])
         date_max = str(date_range[1])
 
-    data = data.query('@date_min < tr_date < @date_max')
+    data = data.query('@date_min <= tr_date <= @date_max')
     
-    # --------------------- Вычисления ------------------------- 
-    allusers = data['user_id'].nunique()
-    activ_users = len(client_table.query('day_on < 30'))
-
-    subscibers = data.query('subscr.notna()')['user_id'].unique()
-    allsub = len(subscibers)
-
-    procsub = 100 * allsub / allusers
-    allsubsum = data.query('user_id.isin(@subscibers)')['oper_sum'].sum()
-
-    sub_dynamik = data.query('user_id.isin(@subscibers)').groupby('tr_date').agg({'tr_id' : 'count', 'oper_sum' : 'sum', 'user_id' : 'nunique'})
-    sub_dynamik['cumsum'] = sub_dynamik['oper_sum'].cumsum()
-    sub_dynamik['cumuser'] = data.query('user_id.isin(@subscibers)')[['tr_date','user_id']].drop_duplicates(['user_id']).groupby('tr_date').count().cumsum()
-    sub_dynamik['cumuser'] = sub_dynamik['cumuser'].ffill()
     
-    tab1, tab2 = st.tabs(["Все донаторов", "Подписчики"])
+    
+    tab = st.tabs(["Все донаторы", "Подписчики", "Покупатели"])
     # ----------------- Все донаторы -------------------------            
-    with tab1:
+    with tab[0]:
         prbar.progress(30, text='Донаторы...')   
 
+        # --------------------- Вычисления ------------------------- 
+        allusers = data['user_id'].nunique()
+        activ_users = len(client_table.query('day_on < 30'))
+        subscibers = data.query('subscr.notna()')['user_id'].unique()
+        allsub = len(subscibers)
+        allbyers = data.query('type=="Покупка"')['user_id'].nunique()
+        
         # ----------------- Все донаторы показатели ------------------  
         row = st.container()
         with row:    
-            col1, col2, col3 = st.columns(3)
-            with col1:
+            col = st.columns(4)
+            with col[0]:
                 container = st.container(border=True)
                 container.write(f"Всего донаторов: **{allusers}**")
-            with col2:
+            with col[1]:
                 container = st.container(border=True)
                 container.write(f"Оформивщих подписку: **{allsub}**")            
-            with col3:
+            with col[2]:
                 container = st.container(border=True)
-                container.write(f"Активные в последние 30 дней: **{activ_users}**")            
+                container.write(f"Сделавших покупку: **{allbyers}**")            
+            with col[3]:
+                container = st.container(border=True)
+                container.write(f"Активных за 30 дней: **{activ_users}**")            
+
 
         # ----------------- Все донаторы графики ------------------  
         row = st.container()
         with row:    
             col1, col2 = st.columns(2, border=True)
             with col1:
-                st.markdown('**Донаторы с наибольщими транзакциями**')
+                st.markdown('**Донаторы с наибольщими суммами транзакций**')
                 dd = data.groupby('user_id', as_index=False).agg({'oper_sum': 'sum', 'tr_id': 'count'}).sort_values(by='oper_sum', ascending=False).head(10)
 
                 st.write(alt.Chart(dd).mark_bar().encode(
@@ -83,7 +81,7 @@ with mainblok:
                 ))
 
             with col2:
-                st.markdown('**Донаторы сделавшие больще всего транзакций**')
+                st.markdown('**Донаторы, сделавшие больще всего транзакций**')
                 st.write(alt.Chart(dd).mark_bar().encode(
                     y=alt.Y('user_id', sort='-x', title='Донаторы'),
                     x=alt.X('tr_id', title='Колво транзакций'),
@@ -113,9 +111,21 @@ with mainblok:
                     color=alt.value('#a1c5c5'),
                 )) 
 
+
+    
     # ----------------- Подписчики -------------------------            
-    with tab2:
+    with tab[1]:
         prbar.progress(60, text='Подписчики')
+
+        # --------------------- Вычисления ------------------------- 
+        procsub = 100 * allsub / allusers
+        allsubsum = data.query('user_id.isin(@subscibers) & type!="Покупка"')['oper_sum'].sum()
+    
+        sub_dynamik = data.query('user_id.isin(@subscibers) & type!="Покупка"').groupby('tr_date').agg({'tr_id' : 'count', 'oper_sum' : 'sum', 'user_id' : 'nunique'})
+        sub_dynamik['cumsum'] = sub_dynamik['oper_sum'].cumsum()
+        sub_dynamik['cumuser'] = data.query('user_id.isin(@subscibers)')[['tr_date','user_id']].drop_duplicates(['user_id']).groupby('tr_date').count().cumsum()
+        sub_dynamik['cumuser'] = sub_dynamik['cumuser'].ffill()
+        
         # ----------------- Подписчики показатели ------------------         
         row = st.container()
         with row:    
@@ -128,7 +138,7 @@ with mainblok:
                 container.write(f"Процент подписчиков: **{procsub:.2f}%**")            
             with col3:
                 container = st.container(border=True)
-                container.write(f"Сумма транзакций: **{allsubsum:_.0f} р**".replace('_', ' '))            
+                container.write(f"Сумма транзакций подписок: **{allsubsum:_.0f} р**".replace('_', ' '))            
 
         # ----------------- Подписчики графики ------------------ 
         row = st.container()
@@ -139,8 +149,52 @@ with mainblok:
                 st.line_chart(sub_dynamik['cumuser'], color='#506788', x_label = '', y_label = '')         
                 
             with col2:
-                st.markdown('**Сумма транзакций нарастанием**')
-                st.line_chart(sub_dynamik['cumsum'], color='#eb606c', x_label = '', y_label = '')       
+                st.markdown('**Сумма транзакций подписок нарастанием**')
+                st.line_chart(sub_dynamik['cumsum'], color='#eb606c', x_label = '', y_label = '')   
+
+        st.warning('* Подписчики - у кого в транзакциях есть индификатор подписки')
+
+    
+    
+    # ----------------- Покупатели -------------------------            
+    with tab[2]:
+        prbar.progress(80, text='Покупатели')
+
+        # --------------------- Вычисления ------------------------- 
+
+        allbyetr = data.query('type=="Покупка"')['tr_id'].count()
+        allbyesum = data.query('type=="Покупка"')['oper_sum'].sum()
+        byers_dynamik = data.query('type=="Покупка"').groupby('tr_date').agg({'tr_id' : 'count', 'oper_sum' : 'sum', 'user_id' : 'nunique'})
+        byers_dynamik['cumsum'] = byers_dynamik['oper_sum'].cumsum()
+
+        # ----------------- Покупатели показатели ------------------
+        row = st.container()
+        with row:    
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                container = st.container(border=True)
+                container.write(f"Всего покупателей: **{allbyers}**")
+            with col2:
+                container = st.container(border=True)
+                container.write(f"Всего покупок: **{allbyetr}**")            
+            with col3:
+                container = st.container(border=True)
+                container.write(f"Сумма транзакций покупок: **{allbyesum:_.0f} р**".replace('_', ' '))          
+         # ----------------- Покупатели графики ------------------ 
+        row = st.container()
+        with row:    
+            col1, col2 = st.columns(2, border=True)
+            with col1:
+                st.markdown('**Покупки по дням**')
+                st.line_chart(byers_dynamik['tr_id'], color='#506788', x_label = '', y_label = '')         
+                
+            with col2:
+                st.markdown('**Сумма транзакций покупок нарастанием**')
+                st.line_chart(byers_dynamik['cumsum'], color='#eb606c', x_label = '', y_label = '')          
+
+        allsum = data['oper_sum'].sum()    
+        st.warning(f'* Дисбаланс суммы всех донатов  и покупок + подписок: **{allsum:_.0f}р - ({allsubsum:_.0f}р + {allbyesum:_.0f}р) = {allsum - allsubsum - allbyesum:_.0f}p** в пользу подписчиков, которые не попали под критерий "наличие индификатора подписки"'.replace('_', ' ') )
+                
     prbar.empty()
 
     

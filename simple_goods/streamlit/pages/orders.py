@@ -31,7 +31,7 @@ with mainblok:
         date_min = str(date_range[0])
         date_max = str(date_range[1])
 
-    data = data.query('@date_min < tr_date < @date_max')
+    data = data.query('@date_min <= tr_date <= @date_max')
   
     
     tab1, tab2 = st.tabs(["Успешные", "Отклоненные"])
