@@ -92,7 +92,7 @@ with mainblok:
                 container.write(f"Среднее колво пользователей в месяц: **{users_month:.0f}**")
             with col2:
                 container = st.container(border=True)
-                container.write(f"Средняя колво транзакций в месяц: **{tr_month:.0f}**") 
+                container.write(f"Среднее колво транзакций в месяц: **{tr_month:.0f}**") 
             with col3:
                 container = st.container(border=True)
                 container.write(f"Средняя сумма транзакций в месяц: **{sum_month:_.0f}** р.".replace('_', ' '))  

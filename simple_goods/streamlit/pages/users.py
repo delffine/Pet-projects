@@ -163,8 +163,8 @@ with mainblok:
                 
                 pie1 = alt.Chart(dd).mark_arc(innerRadius=70).encode(
                     theta=alt.Theta(field='user_prec', type="quantitative"),
-                    color=alt.Color(field="user", type="nominal"),
-                    tooltip=alt.Tooltip(field = 'user_prec', format = '.2%', title = "Доля")
+                    color=alt.Color(field="user", type="nominal",  title = "Роль"),
+                    tooltip=alt.Tooltip(field='user_prec', format = '.2%', title = "Роль")
                 ).properties(
                     height=400, width=400,
                     title="Распределение пользователей"
@@ -176,7 +176,7 @@ with mainblok:
                 st.markdown('**Пользователи по сумме транзакций**')
                 bar = alt.Chart(dd).mark_bar().encode(
                     y=alt.Y('oper_sum',  title='Сумма'),
-                    x=alt.X('user', sort='-y', title='Тип пользователя', axis=alt.Axis(labelAngle=0)),
+                    x=alt.X('user', sort='-y', title='', axis=alt.Axis(labelAngle=0)),
                     color=alt.value('#506788'),
                 )
                 st.write(bar)
@@ -186,7 +186,7 @@ with mainblok:
                 st.markdown('**Пользователи по колву транзакций**')
                 bar = alt.Chart(dd).mark_bar().encode(
                     y=alt.Y('oper_count',  title='Колво транзакций'),
-                    x=alt.X('user', sort='-y', title='Тип пользователя', axis=alt.Axis(labelAngle=0)),
+                    x=alt.X('user', sort='-y', title='', axis=alt.Axis(labelAngle=0)),
                     color=alt.value('#f2bc62'),
                 )
                 st.write(bar)
@@ -197,7 +197,7 @@ with mainblok:
                 dd = dd[['user', 'user_id', 'oper_sum', 'oper_count']]
                 dd.loc[4] = pd.Series(dd.sum(), name='Total')
                 dd.loc[4, 'user'] = 'Итого'
-                dd.columns =('Тип пользователя', 'Колво', 'Сумма', 'Транзакций')
+                dd.columns =('Роль пользователя', 'Колво', 'Сумма', 'Транзакций')
                 
                 st.data_editor(dd,
                    use_container_width=True,
@@ -205,7 +205,7 @@ with mainblok:
                    )
 
 
-    #------------------- Данмика подписок / покупок ---------------------- 
+    #------------------- Динамика подписок / покупок ---------------------- 
     
     with tab[2]:
         prbar.progress(80, text='Данмика подписок / покупок')   
