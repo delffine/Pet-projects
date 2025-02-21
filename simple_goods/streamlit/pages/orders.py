@@ -76,9 +76,11 @@ with mainblok:
         cols = st.columns(2, border=True)
         with cols[0]:
             dd = data.groupby('type', as_index=False)['tr_id'].count()
+            dd['tr_per'] = dd['tr_id'] / dd['tr_id'].sum()
             pie = alt.Chart(dd).mark_arc(innerRadius=70).encode(
-                theta=alt.Theta(field="tr_id", title='Колво', type="quantitative"),
+                theta=alt.Theta(field="tr_per", title='Колво', type="quantitative"),
                 color=alt.Color(field="type", title='Тип', type="nominal"),
+                tooltip=alt.Tooltip(field = 'tr_per', format = '.2%')
             ).properties(
                 height=400, width=400,
                 title="Доли транзакций по типам"
@@ -86,9 +88,11 @@ with mainblok:
             st.write(pie)
         with cols[1]:
             dd = data.groupby('purpose', as_index=False)['tr_id'].count()
+            dd['tr_per'] = dd['tr_id'] / dd['tr_id'].sum()
             pie = alt.Chart(dd).mark_arc(innerRadius=70).encode(
-                theta=alt.Theta(field="tr_id", title='Колво', type="quantitative"),
+                theta=alt.Theta(field="tr_per", title='Колво', type="quantitative"),
                 color=alt.Color(field="purpose", title='Назначение', type="nominal"),
+                tooltip=alt.Tooltip(field = 'tr_per', format = '.2%')
             ).properties(
                 height=400, width=400,
                 title="Доли транзакций по назначению"
@@ -149,7 +153,6 @@ with mainblok:
             badresult = alt.Chart(dd).mark_bar().encode(
                 x=alt.X('tr_id', title='Колво транзакций'),
                 y=alt.Y('pay_result:N', sort='-x', title='Причина отказа'),
-                tooltip=('pay_result', 'tr_id'),
                 color=alt.value('#eb606c'),
             ).properties(
                 width=600, height=400,
@@ -162,7 +165,6 @@ with mainblok:
             bad_pay_system = alt.Chart(dd).mark_bar().encode(
                 x=alt.X('tr_id', title='Колво транзакций'),
                 y=alt.Y('pay_system:N', sort='-x', title='Платежная система'),
-                tooltip=('pay_system', 'tr_id'),
                 color=alt.value('#506788'),
             ).properties(
                 width=600, height=400,
@@ -178,7 +180,6 @@ with mainblok:
             bad_bank = alt.Chart(dd).mark_bar().encode(
                 x=alt.X('tr_id', title='Колво транзакций'),
                 y=alt.Y('pay_bank:N', sort='-x', title='Причина отказа'),
-                tooltip=('pay_bank', 'tr_id'),
                 color=alt.value('#f2bc62'),
             ).properties(
                 width=600, height=400,
@@ -191,7 +192,6 @@ with mainblok:
             bad_country = alt.Chart(dd).mark_bar().encode(
                 x=alt.X('tr_id', title='Колво транзакций'),
                 y=alt.Y('pay_bank_country:N', sort='-x', title='Платежная система'),
-                tooltip=('pay_bank_country', 'tr_id'),
                 color=alt.value('#a1c5c5'),
             ).properties(
                 width=600, height=400,

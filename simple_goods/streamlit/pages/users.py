@@ -130,7 +130,7 @@ with mainblok:
         #allsubsum = data.query('user_id.isin(@subscibers) & type!="Покупка"')['oper_sum'].sum()
     
        
-        # ----------------- Подписчики показатели ------------------         
+        # ----------------- Подписчики / Покупатели показатели ------------------         
         row = st.container()
         with row:    
             col = st.columns(4)
@@ -148,17 +148,19 @@ with mainblok:
                 container.write(f"Донаторы: **{all_not_byers_subscr}**")            
 
 
-        # ----------------- Подписчики графики ------------------ 
+        # ----------------- Подписчики / Покупатели графики ------------------ 
 
         row = st.container()
         with row:    
             col1, col2 = st.columns(2, border=True)
             with col1:
-                dd = client_table[['byer', 'subscr']].value_counts().reset_index()
+               
+                dd = client_table.groupby(['byer', 'subscr'], as_index=False).agg({'user_id' : 'nunique', 'oper_sum' : 'sum', 'oper_count' : 'sum'}).sort_values(by='user_id', ascending=False)
                 dd['user'] = dd['byer'] + dd['subscr']
                 dd['user'] = dd['user'].replace('--', 'Донатор')
                 dd['user'] = dd['user'].str.replace('-', '').str.replace('льПо', 'ль & По')
-                dd['user_prec'] = dd['count'] / allusers
+                dd['user_prec'] = dd['user_id'] / allusers
+                
                 pie1 = alt.Chart(dd).mark_arc(innerRadius=70).encode(
                     theta=alt.Theta(field='user_prec', type="quantitative"),
                     color=alt.Color(field="user", type="nominal"),
@@ -169,18 +171,33 @@ with mainblok:
                 )
                 
                 st.write(pie1)
+           
+            with col2:
+                st.markdown('**Пользователи по сумме транзакций**')
+                bar = alt.Chart(dd).mark_bar().encode(
+                    y=alt.Y('oper_sum',  title='Сумма'),
+                    x=alt.X('user', sort='-y', title='Тип пользователя', axis=alt.Axis(labelAngle=0)),
+                    color=alt.value('#506788'),
+                )
+                st.write(bar)
+
+            col1, col2 = st.columns(2, border=True)
+            with col1:
+                st.markdown('**Пользователи по колву транзакций**')
+                bar = alt.Chart(dd).mark_bar().encode(
+                    y=alt.Y('oper_count',  title='Колво транзакций'),
+                    x=alt.X('user', sort='-y', title='Тип пользователя', axis=alt.Axis(labelAngle=0)),
+                    color=alt.value('#f2bc62'),
+                )
+                st.write(bar)
+                
             with col2:
                 st.markdown('**Подписчики / покупатели / донаторы**')
-                dd = client_table.groupby(['byer', 'subscr'], as_index=False).agg({'user_id' : 'nunique', 'oper_sum' : 'sum', 'oper_count' : 'sum'}).sort_values(by='user_id', ascending=False)
-                #dd = client_table[['byer', 'subscr']].value_counts().reset_index()
-                dd['user'] = dd['byer'] + dd['subscr']
-                dd['user'] = dd['user'].replace('--', 'Донатор')
-                dd['user'] = dd['user'].str.replace('-', '').str.replace('льПо', 'ль & По')
+
                 dd = dd[['user', 'user_id', 'oper_sum', 'oper_count']]
                 dd.loc[4] = pd.Series(dd.sum(), name='Total')
                 dd.loc[4, 'user'] = 'Итого'
                 dd.columns =('Тип пользователя', 'Колво', 'Сумма', 'Транзакций')
-                #st.write(dd)
                 
                 st.data_editor(dd,
                    use_container_width=True,
@@ -188,7 +205,8 @@ with mainblok:
                    )
 
 
-        
+    #------------------- Данмика подписок / покупок ---------------------- 
+    
     with tab[2]:
         prbar.progress(80, text='Данмика подписок / покупок')   
 
