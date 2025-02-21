@@ -22,7 +22,7 @@
 **Бонус:**
 [Дашборд на DataLens](https://datalens.yandex/f8914nvxwpn61)
 
-**Скриншоты**
-
-![img](tver_med.jpg)
-![img](tver_med2.jpg)
+**Скриншоты:**
+|  |  |  |
+| -- | -- | -- | 
+| ![img](tver_med.jpg) | ![img](tver_med3.jpg) | ![img](tver_med2.jpg) |
