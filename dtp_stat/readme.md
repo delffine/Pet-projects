@@ -18,9 +18,9 @@
 **Бонус:**
 [Дашборд на DataLens по ДТП в ПФО](https://datalens.yandex.cloud/4raieoitm47wq)
 
-**Скриншоты**
-![img](dtp1.jpg)
-![img](dtp2.jpg)
-![img](dtp3.jpg)
+**Скриншоты:**
+|  |  |  |  |
+| -- | -- | -- | -- |
+| ![img](dtp1.jpg) | ![img](dtp2.jpg) | ![img](dtp3.jpg) | ![img](dtp4.jpg) |
 
 
