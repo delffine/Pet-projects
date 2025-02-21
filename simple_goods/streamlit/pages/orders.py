@@ -77,9 +77,8 @@ with mainblok:
         with cols[0]:
             dd = data.groupby('type', as_index=False)['tr_id'].count()
             pie = alt.Chart(dd).mark_arc(innerRadius=70).encode(
-                theta=alt.Theta(field="tr_id", type="quantitative"),
-                color=alt.Color(field="type", type="nominal"),
-                tooltip=["type:N", "tr_id:Q"] 
+                theta=alt.Theta(field="tr_id", title='Колво', type="quantitative"),
+                color=alt.Color(field="type", title='Тип', type="nominal"),
             ).properties(
                 height=400, width=400,
                 title="Доли транзакций по типам"
@@ -88,9 +87,8 @@ with mainblok:
         with cols[1]:
             dd = data.groupby('purpose', as_index=False)['tr_id'].count()
             pie = alt.Chart(dd).mark_arc(innerRadius=70).encode(
-                theta=alt.Theta(field="tr_id", type="quantitative"),
-                color=alt.Color(field="purpose", type="nominal"),
-                tooltip=["purpose:N", "tr_id:Q"] 
+                theta=alt.Theta(field="tr_id", title='Колво', type="quantitative"),
+                color=alt.Color(field="purpose", title='Назначение', type="nominal"),
             ).properties(
                 height=400, width=400,
                 title="Доли транзакций по назначению"
@@ -105,7 +103,6 @@ with mainblok:
             big_sum = alt.Chart(dd).mark_bar().encode(
                 y=alt.Y('count', title='Колво'),
                 x=alt.X('oper_sum:O', title='Сумма транзакций'),
-                tooltip=('count', 'oper_sum'),
                 color=alt.value('#eb606c'),  
             ).properties(
                 width=600, height=400,
