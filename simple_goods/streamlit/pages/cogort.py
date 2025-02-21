@@ -55,7 +55,19 @@ mainblok = st.container()
 with mainblok:
     prbar = st.progress(0, text='Начинаю вычисления ...')
     
-    st.header('Когортный анализ')
+    
+    
+    col = st.columns(3)
+    with col[0]:
+        st.header('Когортный анализ')
+    with col[2]:
+        option = st.selectbox("Пользователи", ("Все", "Подписчики", "Покупатели", "Донаторы"))
+        gst = 'byer != "ВСЕ"'
+        if option == "Все": gst = 'byer != "ВСЕ"'
+        if option == "Подписчики": gst = 'subscr =="Подписчик"'
+        if option == "Покупатели": gst = 'byer == "Покупатель"'
+        if option == "Донаторы": gst = 'byer != "Покупатель" & subscr !="Подписчик"'
+        
     date_filtr = st.container(border=True)
     with date_filtr:
         date_min = pd.to_datetime(data['tr_date']).dt.date.min()
@@ -65,10 +77,13 @@ with mainblok:
         date_max = str(date_range[1])
 
     data = data.query('@date_min <= tr_date <= @date_max')
-    client_table = sg_lib.get_client_table(data)    
     dd = data.groupby(['user_id']).agg({'oper_sum' : 'sum', 'tr_date' : 'nunique'})
     bigpayers = dd.query('tr_date == 1 & oper_sum > 25000').sort_values(by = 'oper_sum', ascending = False)
-   
+
+
+    client_table = sg_lib.get_client_table(data)
+    client_table  = client_table.query(gst).reset_index(drop=True)    
+    
     col = st.columns(4)
     with col[0]:
         month_horizont = int(data['month_ago'].max())
@@ -111,10 +126,10 @@ with mainblok:
             if par_col[i] != 'table':
                 col1, col2 = st.columns(2, border=True)
                 with col1: 
-                    st.text('Тепловая карта')
+                    st.markdown('**Тепловая карта**')
                     corogt_alt(ch_dynamika, 'ch:O', 'm_live:O', par_col[i])
                 with col2: 
-                    st.text('Динамика когорт')
+                    st.markdown('**Динамика когорт**')
                     dd = ch_dynamika.pivot(index='m_live', columns='ch', values=par_col[i])
                     st.line_chart(dd, x_label = 'Месяц жизни', y_label = par_name[i])            
             else:    
@@ -124,7 +139,7 @@ with mainblok:
                 #       "ch": st.column_config.TextColumn("Когорта"),
                 #       "m_live": st.column_config.NumberColumn("Месяц жизни"),
                 #       "tr_count": st.column_config.NumberColumn("Колво транзакции"),
-                #       "user_count": st.column_config.NumberColumn("Колво донаторов"),
+                #       "user_count": st.column_config.NumberColumn("Колво пользователей"),
                 #       "avg_sum": st.column_config.NumberColumn("Средний чек"),
                 #       "ltv": st.column_config.NumberColumn("LTV"),
                 #       "rfm_users": st.column_config.NumberColumn("LTV в месяц"),

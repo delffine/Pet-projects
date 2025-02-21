@@ -57,8 +57,17 @@ with mainblok:
     prbar = st.progress(0, text='Начинаю вычисления ...')
     
 
-        
-    st.header('RFM анализ')
+    col = st.columns(3)
+    with col[0]:
+        st.header('RFM анализ')
+    with col[2]:
+        option = st.selectbox("Пользователи", ("Все", "Подписчики", "Покупатели", "Донаторы"))
+        gst = 'byer != "ВСЕ"'
+        if option == "Все": gst = 'byer != "ВСЕ"'
+        if option == "Подписчики": gst = 'subscr =="Подписчик"'
+        if option == "Покупатели": gst = 'byer == "Покупатель"'
+        if option == "Донаторы": gst = 'byer != "Покупатель" & subscr !="Подписчик"'
+    
     date_filtr = st.container(border=True)
     with date_filtr:
         date_min = pd.to_datetime(data['tr_date']).dt.date.min()
@@ -84,6 +93,9 @@ with mainblok:
             r1=lastdate_range[0], r2=lastdate_range[1], 
             f1=freq_range[0], f2=freq_range[1],            
             m1=sum_range[0], m2=sum_range[1])
+            
+    client_table  = client_table.query(gst).reset_index(drop=True)       
+            
 
     #отфильтровывает пользователей с разовыми аномальными суммами 
     #dd = data.groupby(['user_id']).agg({'oper_sum' : 'sum', 'tr_date' : 'nunique'})
@@ -104,25 +116,25 @@ with mainblok:
 
     prbar.progress(20, text='')
     st.header('RFM матрицы')
-
+           
     col1, col2 = st.columns(2, border=True)
     with col1:
-        st.text('Количество пользователей')
+        st.markdown('**Количество пользователей**')
         rfm_alt(rfm_table, 'rfm_users:Q')
     prbar.progress(40, text='')        
     with col2:
-        st.text('Сумма транзакций')
+        st.markdown('**Сумма транзакций**')
         rfm_alt(rfm_table, 'rfm_sum:Q')
 
     prbar.progress(60, text='')
 
     col1, col2 = st.columns(2, border=True)
     with col1:
-        st.text('Количество транзакций')
+        st.markdown('**Количество транзакций**')
         rfm_alt(rfm_table, 'rfm_tr:Q')
     prbar.progress(80, text='')        
     with col2:
-        st.text('Средний чек')
+        st.markdown('**Средний чек**')
         rfm_alt(rfm_table, 'avg_sum:Q')
         
     st.header('RFM таблица')

@@ -12,7 +12,8 @@ py_pages = {
         st.Page("pages/rfm.py", title="RFM анализ"),
         st.Page("pages/cogort.py", title="Когортный анализ"),
         st.Page("pages/data_set.py", title="Данные"),
-    ],  
+        st.Page("pages/about.py", title="О дашборде"),
+        ],  
 }
 st.navigation(py_pages)
 pg = st.navigation(py_pages)
