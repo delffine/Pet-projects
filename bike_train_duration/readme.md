@@ -29,6 +29,7 @@
 
 - Сравнение способов определения FTP не показало статистически значимое различие между ними.
 
-**Примеры графиков**
-![scrin1](https://github.com/delffine/Pet-projects/blob/main/bike_train_duration/velo2.jpg)
-![scrin2](https://github.com/delffine/Pet-projects/blob/main/bike_train_duration/velo1.jpg)
+**Скриншоты**
+|  |  |
+| -- | -- |
+|![scrin1](velo2.jpg) | ![scrin2](velo1.jpg) |
