@@ -105,7 +105,7 @@ with mainblok:
                 st.line_chart(month_dynamik, y='user_id', x='tr_date', color='#506788', x_label = '', y_label = '')
 
             with col2:
-                st.markdown('**Транзакции по месяцам**')
+                st.markdown('**Суммы транзакции по месяцам**')
                 st.line_chart(month_dynamik, y='oper_sum', x='tr_date', color='#eb606c', x_label = '', y_label = '')
 
     # ------- Среднедневные значения ----------                 
@@ -136,7 +136,7 @@ with mainblok:
                 st.line_chart(day_dynamik['user_id'], color='#506788', x_label = '', y_label = '')      
 
             with col2:
-                st.markdown('**Транзакции по дням**')
+                st.markdown('**Суммы транзакции по дням**')
                 st.line_chart(day_dynamik['oper_sum'], color='#eb606c', x_label = '', y_label = '')      
                 
     prbar.empty()

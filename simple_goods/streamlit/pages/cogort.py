@@ -15,6 +15,7 @@ def corogt_alt(dd, xcol, ycol, valcol, pr=0):
     #valcol - колонка целевой переменной
     #pr - колво знаков после запятой
     #-----------------------------------------------
+    if (pr==0) & (dd[valcol].mean() < 3): pr=2
     base = alt.Chart(dd).encode(
         x=alt.X(xcol, title='Когорта', sort='-x', axis=alt.Axis(labelAngle=0)),
         y=alt.Y(ycol, title='Месяц жизни'),
@@ -28,7 +29,7 @@ def corogt_alt(dd, xcol, ycol, valcol, pr=0):
         .scale(scheme="redyellowgreen")
         .legend(None)
     )
-    if (pr==0) & (dd[valcol].mean() < 3): pr=2
+
     text = base.mark_text(baseline="middle").encode(
         text=alt.Text(valcol+':Q', format=f'.{pr}f'),
         color=alt.value("white"),
@@ -112,7 +113,7 @@ with mainblok:
       
     
     
-    par_name = ["Количество транзакций", "Количество пользователей", "Средний чек",
+    par_name = ["Количество транзакций", "Активные пользователи", "Средний чек",
             "LTV", "LTV в месяц", "Коэффициент удержания","Коэффициент оттока" , 'Таблица когорт']
     par_col = ['tr_count', 'user_count', 'avg_sum', 'ltv', 'ltv_m', 'rr', 'cr', 'table']
     par_len = len(par_col)
@@ -134,16 +135,18 @@ with mainblok:
                     st.line_chart(dd, x_label = 'Месяц жизни', y_label = par_name[i])            
             else:    
               
-                st.data_editor(ch_dynamika[['ch', 'm_live', 'tr_count', 'user_count', 'avg_sum', 'ltv', 'ltv_m', 'rr', 'cr']],
-                #   column_config={
-                #       "ch": st.column_config.TextColumn("Когорта"),
-                #       "m_live": st.column_config.NumberColumn("Месяц жизни"),
-                #       "tr_count": st.column_config.NumberColumn("Колво транзакции"),
-                #       "user_count": st.column_config.NumberColumn("Колво пользователей"),
-                #       "avg_sum": st.column_config.NumberColumn("Средний чек"),
-                #       "ltv": st.column_config.NumberColumn("LTV"),
-                #       "rfm_users": st.column_config.NumberColumn("LTV в месяц"),
-                #   },
+                st.data_editor(ch_dynamika[['ch', 'm_live', 'tr_count', 'user_count', 'avg_sum', 'ltv', 'ltv_m', 'rr', 'cr']].sort_values(by=['ch', 'm_live'], ascending=[False, True]),
+                   column_config={
+                       "ch": st.column_config.TextColumn("Когорта"),
+                       "m_live": st.column_config.NumberColumn("Мес.жизни"),
+                       "tr_count": st.column_config.NumberColumn("Транз"),
+                       "user_count": st.column_config.NumberColumn("Акт.польз"),
+                       "avg_sum": st.column_config.NumberColumn("Ср.чек"),
+                       "ltv": st.column_config.NumberColumn("LTV"),
+                       "ltv_m": st.column_config.NumberColumn("LTV/мес"),
+                       "rr": st.column_config.NumberColumn("Удержание"),
+                       "cr": st.column_config.NumberColumn("Отток"),
+                   },
                    use_container_width=True,
                    hide_index=True,
                    )
