@@ -77,7 +77,7 @@ with mainblok:
         with cols[0]:
             dd = data.groupby('type', as_index=False)['tr_id'].count()
             dd['tr_per'] = dd['tr_id'] / dd['tr_id'].sum()
-            pie = alt.Chart(dd).mark_arc(innerRadius=70).encode(
+            pie = alt.Chart(dd).mark_arc(innerRadius=50).encode(
                 theta=alt.Theta(field="tr_per", title='Колво', type="quantitative"),
                 color=alt.Color(field="type", title='Тип', type="nominal"),
                 tooltip=alt.Tooltip(field = 'tr_per', format = '.2%')
@@ -89,7 +89,7 @@ with mainblok:
         with cols[1]:
             dd = data.groupby('purpose', as_index=False)['tr_id'].count()
             dd['tr_per'] = dd['tr_id'] / dd['tr_id'].sum()
-            pie = alt.Chart(dd).mark_arc(innerRadius=70).encode(
+            pie = alt.Chart(dd).mark_arc(innerRadius=50).encode(
                 theta=alt.Theta(field="tr_per", title='Колво', type="quantitative"),
                 color=alt.Color(field="purpose", title='Назначение', type="nominal"),
                 tooltip=alt.Tooltip(field = 'tr_per', format = '.2%')
@@ -128,6 +128,10 @@ with mainblok:
             
     # ------- Отклоненные ----------            
     with tab2:            
+        
+        #badtr = badtr.query('@date_min <= final_date <= @date_max')
+        #не у всех отклоненных транзакций есть даты, так что выводи все без фильтра
+        
         allbad =  len(badtr)
         badcom = badtr['final_sum'].sum()
         badusers = badtr['user_id'].nunique()

@@ -161,7 +161,7 @@ with mainblok:
                 dd['user'] = dd['user'].str.replace('-', '').str.replace('льПо', 'ль & По')
                 dd['user_prec'] = dd['user_id'] / allusers
                 
-                pie1 = alt.Chart(dd).mark_arc(innerRadius=70).encode(
+                pie1 = alt.Chart(dd).mark_arc(innerRadius=50).encode(
                     theta=alt.Theta(field='user_prec', type="quantitative"),
                     color=alt.Color(field="user", type="nominal",  title = "Роль"),
                     tooltip=alt.Tooltip(field='user_prec', format = '.2%', title = "Роль")
@@ -192,7 +192,7 @@ with mainblok:
                 st.write(bar)
                 
             with col2:
-                st.markdown('**Подписчики / покупатели / донаторы**')
+                st.markdown('**Баланс**')
 
                 dd = dd[['user', 'user_id', 'oper_sum', 'oper_count']]
                 dd.loc[4] = pd.Series(dd.sum(), name='Total')
@@ -204,6 +204,7 @@ with mainblok:
                    hide_index=True,
                    )
 
+        st.warning('- Подписчики определяются по наличию транзакций с индификатором подписки\n- Покупатели определяются по наличию транзакций с типом операции "Оплата". (При предобработке переименовывается в "Покупка"')
 
     #------------------- Динамика подписок / покупок ---------------------- 
     
