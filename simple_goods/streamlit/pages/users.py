@@ -154,6 +154,7 @@ with mainblok:
         with row:    
             col1, col2 = st.columns(2, border=True)
             with col1:
+                sg_colors = ['#eb606c', '#a1c5c5', '#506788', '#f1e7ce', '#42445a', '#e8f3f4',  '#f2bc62', ]
                
                 dd = client_table.groupby(['byer', 'subscr'], as_index=False).agg({'user_id' : 'nunique', 'oper_sum' : 'sum', 'oper_count' : 'sum'}).sort_values(by='user_id', ascending=False)
                 dd['user'] = dd['byer'] + dd['subscr']
@@ -162,22 +163,25 @@ with mainblok:
                 dd['user_prec'] = dd['user_id'] / allusers
                 
                 pie1 = alt.Chart(dd).mark_arc(innerRadius=50).encode(
-                    theta=alt.Theta(field='user_prec', type="quantitative"),
-                    color=alt.Color(field="user", type="nominal",  title = "Роль"),
+                    theta=alt.Theta(field='user_prec', sort='descending', type="quantitative"),
+                    color=alt.Color(field="user", type="nominal", title = "Роль"),
                     tooltip=alt.Tooltip(field='user_prec', format = '.2%', title = "Роль")
                 ).properties(
                     height=400, width=400,
                     title="Распределение пользователей"
+                ).configure_range(
+                    category=alt.RangeScheme(sg_colors)
                 )
                 
                 st.write(pie1)
+
            
             with col2:
                 st.markdown('**Пользователи по сумме транзакций**')
                 bar = alt.Chart(dd).mark_bar().encode(
                     y=alt.Y('oper_sum',  title='Сумма'),
                     x=alt.X('user', sort='-y', title='', axis=alt.Axis(labelAngle=0)),
-                    color=alt.value('#506788'),
+                    color=alt.value('#f2bc62'),
                 )
                 st.write(bar)
 
@@ -187,7 +191,7 @@ with mainblok:
                 bar = alt.Chart(dd).mark_bar().encode(
                     y=alt.Y('oper_count',  title='Колво транзакций'),
                     x=alt.X('user', sort='-y', title='', axis=alt.Axis(labelAngle=0)),
-                    color=alt.value('#f2bc62'),
+                    color=alt.value('#42445a'),
                 )
                 st.write(bar)
                 

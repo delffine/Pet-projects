@@ -32,7 +32,7 @@ with mainblok:
         date_max = str(date_range[1])
 
     data = data.query('@date_min <= tr_date <= @date_max')
-  
+    sg_colors = ['#eb606c', '#a1c5c5', '#506788', '#f1e7ce', '#42445a', '#e8f3f4',  '#f2bc62', ]    
     
     tab1, tab2 = st.tabs(["Успешные", "Отклоненные"])
     # ------- Успешные ----------
@@ -78,24 +78,29 @@ with mainblok:
             dd = data.groupby('type', as_index=False)['tr_id'].count()
             dd['tr_per'] = dd['tr_id'] / dd['tr_id'].sum()
             pie = alt.Chart(dd).mark_arc(innerRadius=50).encode(
-                theta=alt.Theta(field="tr_per", title='Колво', type="quantitative"),
+                theta=alt.Theta(field="tr_per", sort='descending', title='Колво', type="quantitative"),
                 color=alt.Color(field="type", title='Тип', type="nominal"),
                 tooltip=alt.Tooltip(field = 'tr_per', format = '.2%')
             ).properties(
                 height=400, width=400,
                 title="Доли транзакций по типам"
+            ).configure_range(
+                category=alt.RangeScheme(sg_colors)
             )
             st.write(pie)
+            
         with cols[1]:
             dd = data.groupby('purpose', as_index=False)['tr_id'].count()
             dd['tr_per'] = dd['tr_id'] / dd['tr_id'].sum()
             pie = alt.Chart(dd).mark_arc(innerRadius=50).encode(
-                theta=alt.Theta(field="tr_per", title='Колво', type="quantitative"),
+                theta=alt.Theta(field="tr_per", sort='descending', title='Колво', type="quantitative"),
                 color=alt.Color(field="purpose", title='Назначение', type="nominal"),
                 tooltip=alt.Tooltip(field = 'tr_per', format = '.2%')
             ).properties(
                 height=400, width=400,
                 title="Доли транзакций по назначению"
+            ).configure_range(
+                category=alt.RangeScheme(sg_colors)
             )
             st.write(pie)
 
@@ -151,6 +156,8 @@ with mainblok:
                 container.write(f"Потери на коммиссии: **{badcom:_.0f} р**".replace('_', ' ')) 
 
         # ------- Диаграммы ----------
+      
+        
         cols = st.columns(2, border=True)
         with cols[0]:
             dd = badtr.groupby('pay_result', as_index=False)['tr_id'].count().sort_values(by='tr_id', ascending=False).head(20)

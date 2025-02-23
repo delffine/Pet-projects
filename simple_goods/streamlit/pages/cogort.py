@@ -7,17 +7,22 @@ import sg_lib
 #---------------------------------------------------------------    
 #----------- Треугольная табилца динамики когорт ---------------    
 #---------------------------------------------------------------      
-def corogt_alt(dd, xcol, ycol, valcol, pr=0):
+def corogt_alt(dd, xcol, ycol, valcol, pr=0, ch_sort='30d'):
     #-----------------------------------------------    
     #dd - входная таблица когорт
     #xcol - колонка по горизонтали (когорта)
     #ycol - колонка по вертикали (месяц жизни)
     #valcol - колонка целевой переменной
     #pr - колво знаков после запятой
+    #ch_sort - для сортировки вывода когорты в хитмапе
     #-----------------------------------------------
     if (pr==0) & (dd[valcol].mean() < 3): pr=2
+    sh_sort = '-x'
+    if ch_div == '30d': sh_sort ='-x'
+    if ch_div == '1mon': sh_sort ='x'
+    
     base = alt.Chart(dd).encode(
-        x=alt.X(xcol, title='Когорта', sort='-x', axis=alt.Axis(labelAngle=0)),
+        x=alt.X(xcol, title='Когорта', sort=sh_sort, axis=alt.Axis(labelAngle=0)),
         y=alt.Y(ycol, title='Месяц жизни'),
         tooltip=alt.Text(valcol+':Q', format=f'.{pr}f')
         ).properties(
@@ -79,43 +84,74 @@ with mainblok:
 
     data = data.query('@date_min <= tr_date <= @date_max')
     dd = data.groupby(['user_id']).agg({'oper_sum' : 'sum', 'tr_date' : 'nunique'})
-    bigpayers = dd.query('tr_date == 1 & oper_sum > 25000').sort_values(by = 'oper_sum', ascending = False)
-
+    #bigpayers = dd.query('tr_date == 1 & oper_sum > 25000').sort_values(by = 'oper_sum', ascending = False)
+    bigpayers = data.query('oper_sum > 25000')['user_id']
 
     client_table = sg_lib.get_client_table(data)
     client_table  = client_table.query(gst).reset_index(drop=True)    
     
     col = st.columns(4)
     with col[0]:
-        month_horizont = int(data['month_ago'].max())
-        
-        cogort_gorizont = st.number_input('Горизонт анализа', value=month_horizont, min_value=3, max_value=month_horizont)
-  
-    ch_dynamika = pd.DataFrame([])
-    for c in range(1, cogort_gorizont+1):
+        option = st.selectbox("Деление на когорты по", ("Календарный месяц", "30 дней"))
+        ch_div = '1mon'
+        month_horizont = int(data['tr_month'].max())
+        if option == "Календарый месяц": 
+            ch_div = '1mon'
+            month_horizont = int(data['tr_month'].max())
+        if option == "30 дней": 
+            ch_div = '30d'
+            month_horizont = int(data['month_ago'].max())
 
-        ch = set(client_table.query('month_ago == @c and not user_id.isin(@bigpayers)')['user_id'])
-        dd = data.query('user_id.isin(@ch)').groupby('month_ago', as_index = False)\
-                    .agg({'tr_id' : 'count', 'user_id' : 'nunique', 'oper_sum' : 'sum'})
-        dd = dd.rename(columns = {'tr_id' : 'tr_count', 'user_id' : 'user_count'}).sort_values(by='month_ago', ascending=False)
-        
-        dd['ch'] = f'-{c}мес'
-        dd['m_live'] = dd['month_ago'].max() - dd['month_ago'].astype('int') + 1
-        dd['m_live'] = dd['m_live'].astype('int')
-        dd['ltv'] = round(dd['oper_sum'].cumsum() / len(ch),2)
-        dd['ltv_m'] = round(dd['oper_sum'].cumsum() / (len(ch) * dd['m_live']), 2)
-        dd['rr'] = round(dd['user_count'] / len(ch), 2)
-        dd['cr'] = round(dd['user_count'] / dd['user_count'].shift(1), 2)
-        dd['avg_sum'] = round(dd['oper_sum'] / dd['tr_count'], 2)
-        ch_dynamika = pd.concat([ch_dynamika, dd])
+    with col[3]:   
+        cogort_gorizont = st.number_input('Горизонт анализа', value=month_horizont, min_value=3, max_value=month_horizont)
+    
+    #--------- рассчеты показателей для когорт по 30 дней -----------    
+    if ch_div == '30d': 
+        ch30_dynamika = pd.DataFrame([])
+        for c in range(1, cogort_gorizont+1):
+
+            ch = set(client_table.query('month_ago == @c and not user_id.isin(@bigpayers)')['user_id'])
+            dd = data.query('user_id.isin(@ch)').groupby('month_ago', as_index = False)\
+                        .agg({'tr_id' : 'count', 'user_id' : 'nunique', 'oper_sum' : 'sum'})
+            dd = dd.rename(columns = {'tr_id' : 'tr_count', 'user_id' : 'user_count'}).sort_values(by='month_ago', ascending=False)
             
-    ch_dynamika = ch_dynamika.sort_values(by=['ch', 'm_live']).reset_index(drop=True)
-      
+            dd['ch'] = f'-{c}мес'
+            dd['m_live'] = dd['month_ago'].max() - dd['month_ago'].astype('int') + 1
+            dd['m_live'] = dd['m_live'].astype('int')
+            dd['ltv'] = round(dd['oper_sum'].cumsum() / len(ch),2)
+            dd['ltv_m'] = round(dd['oper_sum'].cumsum() / (len(ch) * dd['m_live']), 2)
+            dd['rr'] = round(dd['user_count'] / len(ch), 2)
+            dd['cr'] = round(dd['user_count'] / dd['user_count'].shift(1), 2)
+            dd['avg_sum'] = round(dd['oper_sum'] / dd['tr_count'], 2)
+            ch30_dynamika = pd.concat([ch30_dynamika, dd])
+                
+        ch_dynamika = ch30_dynamika.sort_values(by=['ch', 'm_live']).reset_index(drop=True)
+
+
+    #--------- рассчеты показателей для календарных когорт -----------
+    if ch_div == '1mon':   
+        calendar_ch_dynamika = pd.DataFrame([])
+        for c in range(month_horizont - cogort_gorizont+1, month_horizont+1):
+            ch = set(client_table.query('first_month == @c and not user_id.isin(@bigpayers)')['user_id'])
+            dd = data.query('user_id.isin(@ch)').groupby('tr_month', as_index = False)\
+                        .agg({'tr_id' : 'count', 'user_id' : 'nunique', 'oper_sum' : 'sum'})
+            dd = dd.rename(columns = {'tr_id' : 'tr_count', 'user_id' : 'user_count'})
+
+            dd['ch'] = f'{c}_{calendar.month_abbr[c]}'
+            dd['m_live'] = dd['tr_month'] - c + 1
+            dd['ltv'] = round(dd['oper_sum'].cumsum() / len(ch),2)
+            dd['ltv_m'] = round(dd['oper_sum'].cumsum() / (len(ch) * dd['m_live']),2)
+            dd['rr'] = round(dd['user_count'] / len(ch),2)
+            dd['cr'] = round(dd['user_count'] / dd['user_count'].shift(1),2)
+            dd['avg_sum'] = round(dd['oper_sum'] / dd['tr_count'],2)
+            calendar_ch_dynamika = pd.concat([calendar_ch_dynamika, dd])
+
+        ch_dynamika = calendar_ch_dynamika.reset_index(drop=True)
+
     
-    
-    par_name = ["Количество транзакций", "Активные пользователи", "Средний чек",
+    par_name = ["Количество транзакций", "Активные пользователи", "Сумма транзакций", "Средний чек",
             "LTV", "LTV в месяц", "Коэффициент удержания","Коэффициент оттока" , 'Таблица когорт']
-    par_col = ['tr_count', 'user_count', 'avg_sum', 'ltv', 'ltv_m', 'rr', 'cr', 'table']
+    par_col = ['tr_count', 'user_count', 'oper_sum', 'avg_sum', 'ltv', 'ltv_m', 'rr', 'cr', 'table']
     par_len = len(par_col)
  
     tab = st.tabs(par_name)
@@ -128,19 +164,20 @@ with mainblok:
                 col1, col2 = st.columns(2, border=True)
                 with col1: 
                     st.markdown('**Тепловая карта**')
-                    corogt_alt(ch_dynamika, 'ch:O', 'm_live:O', par_col[i])
+                    corogt_alt(ch_dynamika, 'ch:O', 'm_live:O', par_col[i], ch_sort=ch_div)
                 with col2: 
                     st.markdown('**Динамика когорт**')
                     dd = ch_dynamika.pivot(index='m_live', columns='ch', values=par_col[i])
                     st.line_chart(dd, x_label = 'Месяц жизни', y_label = par_name[i])            
             else:    
               
-                st.data_editor(ch_dynamika[['ch', 'm_live', 'tr_count', 'user_count', 'avg_sum', 'ltv', 'ltv_m', 'rr', 'cr']].sort_values(by=['ch', 'm_live'], ascending=[False, True]),
+                st.data_editor(ch_dynamika[['ch', 'm_live', 'tr_count', 'user_count', 'oper_sum', 'avg_sum', 'ltv', 'ltv_m', 'rr', 'cr']].sort_values(by=['ch', 'm_live'], ascending=[False, True]),
                    column_config={
                        "ch": st.column_config.TextColumn("Когорта"),
                        "m_live": st.column_config.NumberColumn("Мес.жизни"),
                        "tr_count": st.column_config.NumberColumn("Транз"),
                        "user_count": st.column_config.NumberColumn("Акт.польз"),
+                       "oper_sum": st.column_config.NumberColumn("Сум.транз"),
                        "avg_sum": st.column_config.NumberColumn("Ср.чек"),
                        "ltv": st.column_config.NumberColumn("LTV"),
                        "ltv_m": st.column_config.NumberColumn("LTV/мес"),
@@ -155,7 +192,7 @@ with mainblok:
             
 prbar.empty()
 
-st.warning('* В когортном анализе не учитываются плательщики, которые сделали разовые транзакции >25 тысяч рублей\n* Месяц = 30 дней, отсчет идет от максимальной даты транзакции')
+st.warning('* В когортном анализе не учитываются плательщики, которые сделали разовые транзакции >25 тысяч рублей')
 
 # ----------------- Подвал дашборда ---------------------          
 sg_lib.footer()
