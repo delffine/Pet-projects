@@ -139,11 +139,11 @@ with mainblok:
 
             dd['ch'] = f'{c}_{calendar.month_abbr[c]}'
             dd['m_live'] = dd['tr_month'] - c + 1
-            dd['ltv'] = round(dd['oper_sum'].cumsum() / len(ch),2)
-            dd['ltv_m'] = round(dd['oper_sum'].cumsum() / (len(ch) * dd['m_live']),2)
-            dd['rr'] = round(dd['user_count'] / len(ch),2)
-            dd['cr'] = round(dd['user_count'] / dd['user_count'].shift(1),2)
-            dd['avg_sum'] = round(dd['oper_sum'] / dd['tr_count'],2)
+            dd['ltv'] = dd['oper_sum'].cumsum() / len(ch)
+            dd['ltv_m'] = dd['oper_sum'].cumsum() / (len(ch) * dd['m_live'])
+            dd['rr'] = dd['user_count'] / len(ch)
+            dd['cr'] = dd['user_count'] / dd['user_count'].shift(1)
+            dd['avg_sum'] = dd['oper_sum'] / dd['tr_count']
             calendar_ch_dynamika = pd.concat([calendar_ch_dynamika, dd])
 
         ch_dynamika = calendar_ch_dynamika.reset_index(drop=True)
@@ -170,26 +170,41 @@ with mainblok:
                     dd = ch_dynamika.pivot(index='m_live', columns='ch', values=par_col[i])
                     st.line_chart(dd, x_label = 'Месяц жизни', y_label = par_name[i])            
             else:    
-              
-                st.data_editor(ch_dynamika[['ch', 'm_live', 'tr_count', 'user_count', 'oper_sum', 'avg_sum', 'ltv', 'ltv_m', 'rr', 'cr']].sort_values(by=['ch', 'm_live'], ascending=[False, True]),
+                
+                if ch_div == '1mon': sorttt = [True, True] 
+                else: sorttt = [False, True]
+               
+                st.data_editor(ch_dynamika[['ch', 'm_live', 'tr_count', 'user_count', 'oper_sum', 'avg_sum', 'ltv', 'ltv_m', 'rr', 'cr']].sort_values(by=['ch', 'm_live'], ascending=sorttt),
                    column_config={
                        "ch": st.column_config.TextColumn("Когорта"),
                        "m_live": st.column_config.NumberColumn("Мес.жизни"),
                        "tr_count": st.column_config.NumberColumn("Транз"),
                        "user_count": st.column_config.NumberColumn("Акт.польз"),
-                       "oper_sum": st.column_config.NumberColumn("Сум.транз"),
-                       "avg_sum": st.column_config.NumberColumn("Ср.чек"),
-                       "ltv": st.column_config.NumberColumn("LTV"),
-                       "ltv_m": st.column_config.NumberColumn("LTV/мес"),
-                       "rr": st.column_config.NumberColumn("Удержание"),
-                       "cr": st.column_config.NumberColumn("Отток"),
-                   },
+                       "oper_sum": st.column_config.NumberColumn("Сум.транз", format="%.0f руб."),
+                       "avg_sum": st.column_config.NumberColumn("Ср.чек", format="%.0f руб."),
+                       "ltv": st.column_config.NumberColumn("LTV", format="%.0f руб."),
+                       "ltv_m": st.column_config.NumberColumn("LTV/мес", format="%.0f руб."),
+                       "rr": st.column_config.NumberColumn("Удержание", format="%.2f"),
+                       "cr": st.column_config.NumberColumn("Отток", format="%.2f"),
+
+
+#                       "ch": st.column_config.TextColumn("Когорта"),
+#                       "m_live": st.column_config.NumberColumn("Мес.жизни"),
+#                       "tr_count": st.column_config.ProgressColumn("Кол-во транзакций", min_value=0, max_value=ch_dynamika['tr_count'].max(),),
+#                       "user_count": st.column_config.ProgressColumn("Акт. пользователей", min_value=0, max_value=ch_dynamika['user_count'].max(), format="%f"),
+#                       "oper_sum": st.column_config.ProgressColumn("Сумма транзакций", min_value=0, max_value=ch_dynamika['oper_sum'].max(), format="%f руб."),
+#                       "avg_sum": st.column_config.ProgressColumn("Средний чек", min_value=0, max_value=ch_dynamika['avg_sum'].max(), format="%f руб."),
+#                       "ltv": st.column_config.ProgressColumn("LTV", min_value=0, max_value=ch_dynamika['ltv'].max(), format="%f руб."),
+#                       "ltv_m": st.column_config.ProgressColumn("LTV/мес", min_value=0, max_value=ch_dynamika['ltv_m'].max(), format="%f руб."),
+#                       "rr": st.column_config.ProgressColumn("Удержание", min_value=0, max_value=ch_dynamika['rr'].max(), format="%.2f"),
+#                       "cr": st.column_config.ProgressColumn("Отток", min_value=0, max_value=ch_dynamika['cr'].max(), format="%.2f"),
+#
+                       },
                    use_container_width=True,
                    hide_index=True,
                    )
        
- 
-            
+           
 prbar.empty()
 
 st.warning('* В когортном анализе не учитываются плательщики, которые сделали разовые транзакции >25 тысяч рублей')

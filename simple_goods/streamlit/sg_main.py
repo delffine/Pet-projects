@@ -89,10 +89,10 @@ with mainblok:
             col1, col2, col3 = st.columns(3)
             with col1:
                 container = st.container(border=True)
-                container.write(f"Среднее колво пользователей в месяц: **{users_month:.0f}**")
+                container.write(f"Среднее кол-во пользователей в месяц: **{users_month:.0f}**")
             with col2:
                 container = st.container(border=True)
-                container.write(f"Среднее колво транзакций в месяц: **{tr_month:.0f}**") 
+                container.write(f"Среднее кол-во транзакций в месяц: **{tr_month:.0f}**") 
             with col3:
                 container = st.container(border=True)
                 container.write(f"Средняя сумма транзакций в месяц: **{sum_month:_.0f}** р.".replace('_', ' '))  
@@ -120,10 +120,10 @@ with mainblok:
             col1, col2, col3 = st.columns(3)
             with col1:
                 container = st.container(border=True)
-                container.write(f"Среднее колво пользователей в день: **{dayuser:.0f}**")
+                container.write(f"Среднее кол-во пользователей в день: **{dayuser:.0f}**")
             with col2:
                 container = st.container(border=True)
-                container.write(f"Среднее колво транзакций в день: **{daytr:.0f}**") 
+                container.write(f"Среднее кол-во транзакций в день: **{daytr:.0f}**") 
             with col3:
                 container = st.container(border=True)
                 container.write(f"Средняя сумма транзакций в день: **{daysum:_.0f}** р.".replace('_', ' '))              

@@ -62,7 +62,7 @@ with mainblok:
                 container.write(f"Всего пользователей: **{allusers}**")
             with col[1]:
                 container = st.container(border=True)
-                container.write(f"Оформивщих подписку: **{allsub}**")            
+                container.write(f"Оформивших подписку: **{allsub}**")            
             with col[2]:
                 container = st.container(border=True)
                 container.write(f"Сделавших покупку: **{allbyers}**")            
@@ -76,7 +76,7 @@ with mainblok:
         with row:    
             col1, col2 = st.columns(2, border=True)
             with col1:
-                st.markdown('**Пользователи с наибольщими суммами транзакций**')
+                st.markdown('**Пользователи с наибольшими суммами транзакций**')
                 dd = data.groupby('user_id', as_index=False).agg({'oper_sum': 'sum', 'tr_id': 'count'}).sort_values(by='oper_sum', ascending=False).head(10)
 
                 st.write(alt.Chart(dd).mark_bar().encode(
@@ -86,10 +86,10 @@ with mainblok:
                 ))
 
             with col2:
-                st.markdown('**Польователи, сделавшие больще всего транзакций**')
+                st.markdown('**Пользователи, сделавшие больше всего транзакций**')
                 st.write(alt.Chart(dd).mark_bar().encode(
                     y=alt.Y('user_id', sort='-x', title='Пользователи'),
-                    x=alt.X('tr_id', title='Колво транзакций'),
+                    x=alt.X('tr_id', title='Кол-во транзакций'),
                     color=alt.value('#eb606c'),
                 ))
 
@@ -105,17 +105,17 @@ with mainblok:
 
                 st.write(alt.Chart(dd).mark_bar().encode(
                     y=alt.Y('country', sort='-x', title='Страна'),
-                    x=alt.X('user_id', title='Колво пользователей'),
+                    x=alt.X('user_id', title='Кол-во пользователей'),
                     color=alt.value('#f2bc62'),                
                 ))
 
             with col2:
-                st.markdown('**ТОП городов пользовтелей**')
+                st.markdown('**ТОП городов пользователей**')
                 dd = data.groupby('city', as_index=False)['user_id'].nunique().sort_values(by='user_id', ascending=False).head(10)
 
                 st.write(alt.Chart(dd).mark_bar().encode(
                     y=alt.Y('city', sort='-x', title='Город'),
-                    x=alt.X('user_id', title='Колво пользователей'),
+                    x=alt.X('user_id', title='Кол-во пользователей'),
                     color=alt.value('#a1c5c5'),
                 )) 
 
@@ -189,7 +189,7 @@ with mainblok:
             with col1:
                 st.markdown('**Пользователи по колву транзакций**')
                 bar = alt.Chart(dd).mark_bar().encode(
-                    y=alt.Y('oper_count',  title='Колво транзакций'),
+                    y=alt.Y('oper_count',  title='Кол-во транзакций'),
                     x=alt.X('user', sort='-y', title='', axis=alt.Axis(labelAngle=0)),
                     color=alt.value('#42445a'),
                 )
@@ -201,14 +201,14 @@ with mainblok:
                 dd = dd[['user', 'user_id', 'oper_sum', 'oper_count']]
                 dd.loc[4] = pd.Series(dd.sum(), name='Total')
                 dd.loc[4, 'user'] = 'Итого'
-                dd.columns =('Роль пользователя', 'Колво', 'Сумма', 'Транзакций')
+                dd.columns =('Роль пользователя', 'Кол-во', 'Сумма', 'Транзакций')
                 
                 st.data_editor(dd,
                    use_container_width=True,
                    hide_index=True,
                    )
 
-        st.warning('- Подписчики определяются по наличию транзакций с индификатором подписки\n- Покупатели определяются по наличию транзакций с типом операции "Оплата". (При предобработке переименовывается в "Покупка"')
+        st.warning('- Подписчики определяются по наличию транзакций с индефикатором подписки\n- Покупатели определяются по наличию транзакций с типом операции "Оплата". (При предобработке переименовывается в "Покупка"')
 
     #------------------- Динамика подписок / покупок ---------------------- 
     

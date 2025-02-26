@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import os
 import altair as alt
-
+import calendar
 
 #---------------------------------------------------------------    
 #--------------------- Шапка дашборда с меню -------------------
@@ -63,9 +63,8 @@ def loaddata():
             data = pd.DataFrame(columns=['tr_id', 'date', 'user_id', 'user_mail', 'oper_sum', 'final_sum', 'final_date', 'order_id', 'type', 'purpose', 'status', 'subscr', 'city', 'country', 'pay_system', 'pay_bank', 'pay_bank_country', 'pay_result', 'tr_date', 'tr_week', 'tr_month', 'file'])
 
             data.loc[0] = [2080468405, '2024-01-31 20:18:00', 'user_0001', '12ost****@mail.ru', 1000, 968.0, '2024-02-01', '', 'Регулярная оплата', 'Не указано', 'Завершена', '', '', '', '', '', '', '', '2024-01-31', 10, 1.0, 'backup']
-            data.loc[1] = [2080468405, '2024-02-13 20:18:00', 'user_0002', 'erter****@mail.ru', 1500, 1200.0, '2024-02-01', '', 'Регулярная оплата', 'Не указано', 'Завершена', '', '', '', '', '', '', '', '2024-02-13', 5, 2.0, 'backup']            
-
-
+            data.loc[1] = [2080468405, '2024-02-13 20:18:00', 'user_0002', 'erter****@mail.ru', 1500, 1200.0, '2024-02-01', '', 'Регулярная оплата', 'Не указано', 'Завершена', '', '', '', '', '', '', '', '2024-02-13', 5, 2.0, 'backup']
+    
     data['date'] = pd.to_datetime(data['date'])
     return data
     
@@ -90,40 +89,38 @@ def get_client_table(data, r1=30, r2=90, f1=0.99, f2=2, m1=400, m2=1400):
     # Признаки покупателя / подписчика
     ch_byers = data.query('type=="Покупка"')['user_id'].unique()
     ch_subscr = data.query('subscr.notna()')['user_id'].unique()
-    #ch_byers_subsr = list(set(byers) & set(subscibers))
-    #№ch_notbyeer_notsub = list(set(data['user_id'].unique()) - set(byers) - set(subscibers))
-
-
-
+    
     maxdate = data['date'].max()
-    data['days_ago'] = maxdate - data['date']
-    data['days_ago'] = data['days_ago'].dt.days
+    data['days_ago'] = (maxdate - data['date']).dt.days
     data['month_ago'] = data['days_ago'] // 30 + 1
     
     #client_table = data.query('not user_id.isin(@bigpayers.index)').groupby('user_id').agg({
     client_table = data.groupby('user_id', as_index=False).agg({
-    'user_mail' : 'first', 
-    'tr_id' : 'count', 
-    'oper_sum' : 'sum', 
-    'date' : ['min', 'max'],
-    'days_ago': 'max',
-    'month_ago': 'max'
-    })
+            'user_mail' : 'first', 
+            'tr_id' : 'count', 
+            'oper_sum' : 'sum', 
+            'date' : ['min', 'max'],
+            'days_ago': 'max',
+            'month_ago': 'max'
+            })
     
     client_table.columns = ['user_id', 'user_mail', 'oper_count', 'oper_sum', 'first_date', 'last_date', 'days_ago', 'month_ago']
     client_table['last_date'] = pd.to_datetime(client_table['last_date'])
     client_table['first_date'] = pd.to_datetime(client_table['first_date'])
     
-    client_table['day_on'] = client_table['last_date'] - client_table['first_date']
-    client_table['day_on'] = client_table['day_on'].dt.days
-
-    client_table['first_month'] = pd.DatetimeIndex(client_table['first_date']).month
+    client_table['day_on'] = (client_table['last_date'] - client_table['first_date']).dt.days
     client_table['month_on'] = 1 + client_table['day_on'] / 30
+    client_table['first_month'] = pd.DatetimeIndex(client_table['first_date']).month
+
+
     client_table['oper_frec'] = client_table['oper_count'] / client_table['month_on']
 
     maxdate = data.query('date.notna()')['date'].max()
     client_table['day_last'] = client_table['last_date'].apply(lambda x: pd.to_datetime(maxdate) - x)
     client_table['day_last'] = client_table['day_last'].dt.days    
+    
+    # когота по первому месяцу
+    client_table['ch'] = client_table['first_month'].apply(lambda x: f"{x}_{calendar.month_abbr[x]}")
     
     # Ранги 1 - отлично, 2 - хорошо, 3 - плохо
     client_table['R'] = client_table['day_last'].apply(lambda x: '1' if x < r1 else ('2' if x < r2 else '3'))

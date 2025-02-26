@@ -83,12 +83,18 @@ with mainblok:
     with rfm_filtr:
         col = st.columns(3)
         with col[0]:
-            lastdate_range = st.slider("Границы рангов дней с последнего действия", 10, 180, (30, 90))
+            st.text('Recency (Давность): Дни с последнего действия')
+            lastdate_range = st.slider("Границы рангов R:", 10, 180, (30, 90))
+            st.caption('Недавние(1) / Спящие(2) / Уходящие(3)')
         with col[1]:
-            freq_range = st.slider("Границы рангов частоты транзакций", 0.5, 5.0, (0.99, 2.0))
+            st.text('Frequency (Частота): Кол-во транзакций в месяц')
+            freq_range = st.slider("Границы рангов F:", 0.5, 5.0, (0.99, 2.0))
+            st.caption('Разовые(3) / Редкие(2) / Частые(1)')
         with col[2]:
-            sum_range = st.slider("Границы рангов сумм транзакций", 100, 5000, (400, 1400))
-    
+            st.text('Monetary (Деньги): Сумма транзакций')
+            sum_range = st.slider("Границы рангов M:", 100, 5000, (400, 1400))
+            st.caption(' Маленький чек(3) / Средний чек(2) / Большой чек(1)')
+            
     client_table = sg_lib.get_client_table(data, 
             r1=lastdate_range[0], r2=lastdate_range[1], 
             f1=freq_range[0], f2=freq_range[1],            
@@ -138,15 +144,21 @@ with mainblok:
         rfm_alt(rfm_table, 'avg_sum:Q')
         
     st.header('RFM таблица')
+    
+    rfm_table['rfm_sum'] = rfm_table['rfm_sum'].astype('float')
+    rfm_table['rfm_users'] = rfm_table['rfm_users'].astype('float')
+    rfm_table['rfm_tr'] = rfm_table['rfm_tr'].astype('float')
+    rfm_table['avg_sum'] = rfm_table['avg_sum'].astype('float')
+    
     st.data_editor(rfm_table[['RFM', 'R', 'F', 'M', 'rfm_users', 'rfm_tr', 'rfm_sum', 'avg_sum']],
        column_config={
            "R": st.column_config.TextColumn("Давность"),
            "F": st.column_config.TextColumn("Частота"),
            "M": st.column_config.TextColumn("Сумма"),
-           "rfm_users": st.column_config.NumberColumn("Польз"),
-           "rfm_tr": st.column_config.NumberColumn("Транз"),
-           "rfm_sum": st.column_config.NumberColumn("Сумма"),
-           "avg_sum": st.column_config.NumberColumn("Ср.чек"),
+           "rfm_users": st.column_config.ProgressColumn("Пользователей", min_value=0, max_value=rfm_table['rfm_users'].max(), format="%f"),
+           "rfm_tr": st.column_config.ProgressColumn("Транзакций", min_value=0, max_value=rfm_table['rfm_tr'].max(), format="%f"),
+           "rfm_sum": st.column_config.ProgressColumn("Сумма", min_value=0, max_value=rfm_table['rfm_sum'].max(), format="%f руб."),
+           "avg_sum": st.column_config.ProgressColumn("Средний чек", min_value=0, max_value=rfm_table['avg_sum'].max(), format="%f руб."),
        },
        use_container_width=True,
        hide_index=True,
@@ -156,10 +168,10 @@ with mainblok:
 
     st.warning('* Ранги RFM: 1 - отлично, 2 - хорошо, 3 - плохо')
 
-    download_rfm = client_table.reset_index()[['RFM', 'user_id', 'user_mail', 'first_date', 'last_date', 'oper_count', 'oper_sum', 'byer', 'subscr']].copy()
+    download_rfm = client_table.reset_index()[['RFM', 'ch', 'byer', 'subscr', 'user_id', 'user_mail', 'first_date', 'last_date', 'oper_count', 'oper_sum']].copy()
     download_rfm['first_date'] = download_rfm['first_date'].dt.date
     download_rfm['last_date'] = download_rfm['last_date'].dt.date
-    download_rfm.columns = ['RFM', 'id пользователя', 'mail пользователя', 'Первая дата', 'Последняя датa', 'Колво транзакций', 'Сумма транзакций', 'Покупатель', 'Подписчик']
+    download_rfm.columns = ['RFM', 'Когорта', 'Покупатель', 'Подписчик', 'id пользователя', 'mail пользователя', 'Первая дата', 'Последняя датa', 'Кол-во транзакций', 'Сумма транзакций']
     buffer = io.BytesIO()
     download_rfm.to_excel(buffer, index=False)
     st.download_button('Скачать таблицу пользователей с RFM рангами', buffer, file_name='sg_users_rfm.xlsx', type="primary")

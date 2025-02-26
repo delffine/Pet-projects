@@ -50,7 +50,7 @@ with mainblok:
             col1, col2, col3 = st.columns(3)
             with col1:
                 container = st.container(border=True)
-                container.write(f"Всего транзанкий: **{alltr}**") 
+                container.write(f"Всего транзакций: **{alltr}**") 
             with col2:
                 container = st.container(border=True)
                 container.write(f"Медианная сумма транзакций: **{mediansum:_.0f} р**".replace('_', ' ')) 
@@ -78,7 +78,7 @@ with mainblok:
             dd = data.groupby('type', as_index=False)['tr_id'].count()
             dd['tr_per'] = dd['tr_id'] / dd['tr_id'].sum()
             pie = alt.Chart(dd).mark_arc(innerRadius=50).encode(
-                theta=alt.Theta(field="tr_per", sort='descending', title='Колво', type="quantitative"),
+                theta=alt.Theta(field="tr_per", sort='descending', title='Кол-во', type="quantitative"),
                 color=alt.Color(field="type", title='Тип', type="nominal"),
                 tooltip=alt.Tooltip(field = 'tr_per', format = '.2%')
             ).properties(
@@ -93,7 +93,7 @@ with mainblok:
             dd = data.groupby('purpose', as_index=False)['tr_id'].count()
             dd['tr_per'] = dd['tr_id'] / dd['tr_id'].sum()
             pie = alt.Chart(dd).mark_arc(innerRadius=50).encode(
-                theta=alt.Theta(field="tr_per", sort='descending', title='Колво', type="quantitative"),
+                theta=alt.Theta(field="tr_per", sort='descending', title='Кол-во', type="quantitative"),
                 color=alt.Color(field="purpose", title='Назначение', type="nominal"),
                 tooltip=alt.Tooltip(field = 'tr_per', format = '.2%')
             ).properties(
@@ -110,7 +110,7 @@ with mainblok:
             s99 = data['oper_sum'].quantile(0.99)
             dd = data.query('oper_sum > @s99')['oper_sum'].value_counts().reset_index()
             big_sum = alt.Chart(dd).mark_bar().encode(
-                y=alt.Y('count', title='Колво'),
+                y=alt.Y('count', title='Кол-во'),
                 x=alt.X('oper_sum:O', title='Сумма транзакций'),
                 color=alt.value('#eb606c'),  
             ).properties(
@@ -122,7 +122,7 @@ with mainblok:
         with cols[1]:
             dd = data.groupby('oper_sum', as_index=False)['tr_id'].count().sort_values(by='tr_id', ascending=False).head(20)
             bar = alt.Chart(dd).mark_bar().encode(
-                    y=alt.Y('tr_id', title='Колво'),
+                    y=alt.Y('tr_id', title='Кол-во'),
                     x=alt.X('oper_sum:O', sort='-y', title='Сумма транзакций'),
                     color=alt.value('#a1c5c5'),                
             ).properties(
@@ -147,23 +147,23 @@ with mainblok:
             col1, col2, col3 = st.columns(3)
             with col1:
                 container = st.container(border=True)
-                container.write(f"Всего отклоненных транзанкий: **{allbad}**") 
+                container.write(f"Всего отклоненных транзакций: **{allbad}**") 
             with col2:
                 container = st.container(border=True)
                 container.write(f"Пользователей, получивших отказ: **{badusers:.0f}**") 
             with col3:
                 container = st.container(border=True)
-                container.write(f"Потери на коммиссии: **{badcom:_.0f} р**".replace('_', ' ')) 
+                container.write(f"Потери на комиссии: **{badcom:_.0f} р**".replace('_', ' ')) 
+
+
 
         # ------- Диаграммы ----------
-      
-        
         cols = st.columns(2, border=True)
         with cols[0]:
             dd = badtr.groupby('pay_result', as_index=False)['tr_id'].count().sort_values(by='tr_id', ascending=False).head(20)
             badresult = alt.Chart(dd).mark_bar().encode(
-                x=alt.X('tr_id', title='Колво транзакций'),
-                y=alt.Y('pay_result:N', sort='-x', title='Причина отказа'),
+                x=alt.X('tr_id', title='Кол-во транзакций'),
+                y=alt.Y('pay_result:N', sort='-x', title='Причины'),
                 color=alt.value('#eb606c'),
             ).properties(
                 width=600, height=400,
@@ -174,8 +174,8 @@ with mainblok:
         with cols[1]:
             dd = badtr.groupby('pay_system', as_index=False)['tr_id'].count().sort_values(by='tr_id', ascending=False).head(20)
             bad_pay_system = alt.Chart(dd).mark_bar().encode(
-                x=alt.X('tr_id', title='Колво транзакций'),
-                y=alt.Y('pay_system:N', sort='-x', title='Платежная система'),
+                x=alt.X('tr_id', title='Кол-во транзакций'),
+                y=alt.Y('pay_system:N', sort='-x', title='Платежные системы'),
                 color=alt.value('#506788'),
             ).properties(
                 width=600, height=400,
@@ -189,8 +189,8 @@ with mainblok:
         with cols[0]:
             dd = badtr.groupby('pay_bank', as_index=False)['tr_id'].count().sort_values(by='tr_id', ascending=False).head(20)
             bad_bank = alt.Chart(dd).mark_bar().encode(
-                x=alt.X('tr_id', title='Колво транзакций'),
-                y=alt.Y('pay_bank:N', sort='-x', title='Причина отказа'),
+                x=alt.X('tr_id', title='Кол-во транзакций'),
+                y=alt.Y('pay_bank:N', sort='-x', title='Банки'),
                 color=alt.value('#f2bc62'),
             ).properties(
                 width=600, height=400,
@@ -201,8 +201,8 @@ with mainblok:
         with cols[1]:
             dd = badtr.groupby('pay_bank_country', as_index=False)['tr_id'].count().sort_values(by='tr_id', ascending=False).head(20)
             bad_country = alt.Chart(dd).mark_bar().encode(
-                x=alt.X('tr_id', title='Колво транзакций'),
-                y=alt.Y('pay_bank_country:N', sort='-x', title='Платежная система'),
+                x=alt.X('tr_id', title='Кол-во транзакций'),
+                y=alt.Y('pay_bank_country:N', sort='-x', title='Страны'),
                 color=alt.value('#a1c5c5'),
             ).properties(
                 width=600, height=400,
