@@ -43,7 +43,7 @@ with mainblok:
 
         # --------------------- Вычисления ------------------------- 
         allusers = data['user_id'].nunique()
-        activ_users = len(client_table.query('day_on < 30'))
+        activ_users = len(client_table.query('day_last < 30'))
         subscibers = client_table.query('subscr == "Подписчик"')['user_id']
         byers = client_table.query('byer == "Покупатель"')['user_id']
         byers_i_subscr = client_table.query('byer == "Покупатель" & subscr == "Подписчик"')['user_id']
