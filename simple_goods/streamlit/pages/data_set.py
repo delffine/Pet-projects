@@ -38,7 +38,7 @@ def load_rawdata():
         if rawdt.count()[i] == 0: na_col.append(rawdt.count().index[i])
     rawdt = rawdt.drop(na_col, axis = 1)
     pv +=10
-    prbar.progress(pv, 'Удаляем колонки, в которых нет значений либо одно')
+    prbar.progress(pv, 'Удаляем колонки, в которых нет значений, либо одно')
 
     #Удаляем колонки с одним уникальным значением
     na_col = []

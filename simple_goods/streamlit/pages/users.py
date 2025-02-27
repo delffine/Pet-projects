@@ -77,9 +77,9 @@ with mainblok:
             col1, col2 = st.columns(2, border=True)
             with col1:
                 st.markdown('**Пользователи с наибольшими суммами транзакций**')
-                dd = data.groupby('user_id', as_index=False).agg({'oper_sum': 'sum', 'tr_id': 'count'}).sort_values(by='oper_sum', ascending=False).head(10)
+                dd = data.groupby('user_id', as_index=False).agg({'oper_sum': 'sum', 'tr_id': 'count'})
 
-                st.write(alt.Chart(dd).mark_bar().encode(
+                st.write(alt.Chart(dd.sort_values(by='oper_sum', ascending=False).head(10)).mark_bar().encode(
                     y=alt.Y('user_id', sort=None, title='Пользователи'),
                     x=alt.X('oper_sum', title='Сумма транзакций'),
                     color=alt.value('#506788'),                
@@ -87,7 +87,7 @@ with mainblok:
 
             with col2:
                 st.markdown('**Пользователи, сделавшие больше всего транзакций**')
-                st.write(alt.Chart(dd).mark_bar().encode(
+                st.write(alt.Chart(dd.sort_values(by='tr_id', ascending=False).head(10)).mark_bar().encode(
                     y=alt.Y('user_id', sort='-x', title='Пользователи'),
                     x=alt.X('tr_id', title='Кол-во транзакций'),
                     color=alt.value('#eb606c'),

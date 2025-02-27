@@ -106,6 +106,18 @@ with mainblok:
 
         cols = st.columns(2, border=True)
         with cols[0]:
+            dd = data.groupby('oper_sum', as_index=False)['tr_id'].count().sort_values(by='tr_id', ascending=False).head(20)
+            bar = alt.Chart(dd).mark_bar().encode(
+                    y=alt.Y('tr_id', title='Кол-во'),
+                    x=alt.X('oper_sum:O', sort='-y', title='Сумма транзакций'),
+                    color=alt.value('#a1c5c5'),                
+            ).properties(
+                height=400, width=400,
+                title="Наиболее частые суммы транзакций"
+            )
+            st.write(bar)
+
+        with cols[1]:
 
             s99 = data['oper_sum'].quantile(0.99)
             dd = data.query('oper_sum > @s99')['oper_sum'].value_counts().reset_index()
@@ -117,19 +129,9 @@ with mainblok:
                 width=600, height=400,
                 title="Аномально больше суммы (больше 99% транзакций)"
             )
-
             st.write(big_sum)
-        with cols[1]:
-            dd = data.groupby('oper_sum', as_index=False)['tr_id'].count().sort_values(by='tr_id', ascending=False).head(20)
-            bar = alt.Chart(dd).mark_bar().encode(
-                    y=alt.Y('tr_id', title='Кол-во'),
-                    x=alt.X('oper_sum:O', sort='-y', title='Сумма транзакций'),
-                    color=alt.value('#a1c5c5'),                
-            ).properties(
-                height=400, width=400,
-                title="Наиболее частые суммы транзакций"
-            )
-            st.write(bar)
+
+
             
     # ------- Отклоненные ----------            
     with tab2:            
