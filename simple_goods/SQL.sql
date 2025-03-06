@@ -1,8 +1,86 @@
+---------- Запрос медианный чек ----------
+-- параметры запроса:
+-- {{interval_from}}, {{interval_to}} - границы интервала дат
+SELECT percentile_cont(0.5)
+WITHIN GROUP (ORDER BY oper_sum) AS median_value
+FROM public.simplegoods
+WHERE status = 'Завершена' AND tr_date BETWEEN {{interval_from}} AND {{interval_to}}
+
+
+---------- Запрос для кольцовой диаграммы пользователи по ролям ----------
+-- параметры запроса:
+-- {{interval_from}}, {{interval_to}} - границы интервала дат
+
+WITH
+t1 as (SELECT user_id, 
+    SUM(CASE WHEN NOT subscr ISNULL THEN 1 ELSE 0 END) as sub,
+    SUM(CASE WHEN type='Покупка' THEN 1 ELSE 0 END) as buy    
+FROM public.simplegoods
+WHERE status = 'Завершена' AND tr_date BETWEEN {{interval_from}} AND {{interval_to}}
+GROUP BY user_id)
+
+SELECT 'Подписчики' AS tt, COUNT(*) FILTER (WHERE sub > 0 AND buy = 0) FROM t1
+UNION
+SELECT 'Покупители', COUNT(*) FILTER (WHERE buy > 0 AND sub = 0) FROM t1
+UNION
+SELECT 'Доноры', COUNT(*) FILTER (WHERE buy = 0 AND sub = 0) FROM t1
+UNION
+SELECT 'Покуп & Подпис', COUNT(*) FILTER (WHERE buy > 0 AND sub > 0) FROM t1
+
+
+---------- Запрос для линейной диаграммы суммы транзакций по ролям ----------
+-- параметры запроса:
+-- {{interval_from}}, {{interval_to}} - границы интервала дат
+WITH
+t1 as (SELECT user_id, 
+    SUM(oper_sum) as opsum, 
+    SUM(CASE WHEN NOT subscr ISNULL THEN 1 ELSE 0 END) as sub,
+    SUM(CASE WHEN type='Покупка' THEN 1 ELSE 0 END) as buy    
+FROM public.simplegoods
+WHERE status = 'Завершена' AND tr_date BETWEEN {{interval_from}} AND {{interval_to}}
+GROUP BY user_id),
+t2 as (SELECT 'Подписчики' AS Роль, SUM(opsum) FILTER (WHERE sub > 0 AND buy = 0) as opsum FROM t1
+	UNION
+	SELECT 'Покупатели', SUM(opsum) FILTER (WHERE buy > 0 AND sub = 0) FROM t1
+	UNION
+	SELECT 'Донаторы', SUM(opsum) FILTER (WHERE buy = 0 AND sub = 0) FROM t1
+	UNION
+	SELECT 'Покуп & Подпис', SUM(opsum) FILTER (WHERE buy > 0 AND sub > 0) FROM t1 )
+
+SELECT * FROM t2 ORDER BY opsum DESC
+
+
+---------- Запрос для графика пользователи, покупатели, подписчки нарастаранием ----------
+-- параметры запроса:
+-- {{interval_from}}, {{interval_to}} - границы интервала дат
+	
+WITH
+t1 as (SELECT * 
+		FROM public.simplegoods 
+		WHERE tr_date BETWEEN {{interval_from}} AND {{interval_to}}
+		)
+
+SELECT sg1.tr_date as Дата, 
+(SELECT COUNT(DISTINCT sg2.user_id)
+	FROM t1 as sg2
+	WHERE tr_date <= sg1.tr_date
+) AS Пользовтели,
+(SELECT COUNT(DISTINCT sg2.user_id)
+	FROM t1 as sg2
+	WHERE NOT sg2.subscr ISNULL AND tr_date <= sg1.tr_date
+) AS Подписчики,
+(SELECT COUNT(DISTINCT sg2.user_id)
+	FROM t1 as sg2
+	WHERE type='Покупка' AND tr_date <= sg1.tr_date
+) AS Покупатели
+FROM t1 AS sg1
+ORDER BY sg1.tr_date
+
+
 ------ Запрос на пострение матриц кортного анализа -------
 -- параметры запроса:
 -- {{interval_from}}, {{interval_to}} - границы интервала дат
 -- {{col}} - выбор выводимного показателя через параметр
-
 
 WITH
 t1 as (SELECT *,  
@@ -117,51 +195,4 @@ SELECT RF,
  FROM t4 
  GROUP BY RF
  ORDER BY RF
-
-
----------- Запрос для графика пользователи, покупатели, подписчки нарастаранием ----------
--- параметры запроса:
--- {{interval_from}}, {{interval_to}} - границы интервала дат
-	
-WITH
-t1 as (SELECT * 
-		FROM public.simplegoods 
-		WHERE tr_date BETWEEN {{interval_from}} AND {{interval_to}}
-		)
-
-SELECT sg1.tr_date as Дата, 
-(SELECT COUNT(DISTINCT sg2.user_id)
-	FROM t1 as sg2
-	WHERE tr_date <= sg1.tr_date
-) AS Пользовтели,
-(SELECT COUNT(DISTINCT sg2.user_id)
-	FROM t1 as sg2
-	WHERE NOT sg2.subscr ISNULL AND tr_date <= sg1.tr_date
-) AS Подписчики,
-(SELECT COUNT(DISTINCT sg2.user_id)
-	FROM t1 as sg2
-	WHERE type='Покупка' AND tr_date <= sg1.tr_date
-) AS Покупатели
-FROM t1 AS sg1
-ORDER BY sg1.tr_date
-
----------- Запрос для кольцовой диаграммы пользователи по ролям ----------
--- параметры запроса:
--- {{interval_from}}, {{interval_to}} - границы интервала дат
-
-WITH
-t1 as (SELECT user_id, 
-    SUM(CASE WHEN NOT subscr ISNULL THEN 1 ELSE 0 END) as sub,
-    SUM(CASE WHEN type='Покупка' THEN 1 ELSE 0 END) as buy    
-FROM public.simplegoods
-WHERE status = 'Завершена' AND tr_date BETWEEN {{interval_from}} AND {{interval_to}}
-GROUP BY user_id)
-
-
-SELECT 'Подписчики' AS tt, COUNT(*) FILTER (WHERE sub > 0 AND buy = 0) FROM t1
-UNION
-SELECT 'Покупители', COUNT(*) FILTER (WHERE buy > 0 AND sub = 0) FROM t1
-UNION
-SELECT 'Доноры', COUNT(*) FILTER (WHERE buy = 0 AND sub = 0) FROM t1
-UNION
-SELECT 'Покуп & Подпис', COUNT(*) FILTER (WHERE buy > 0 AND sub > 0) FROM t1
+ 
