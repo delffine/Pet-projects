@@ -7,8 +7,7 @@
 Скрипты аналитической панели в папке [**streamlit**](streamlit/) 
 
 Бонус:
-Аналитическая панель на [**DataLens**](https://datalens.yandex/z01wcggxq33el) с использованием **только SQL запросов** к базе PostgreSQL. 
-Прмиеры запросов в файле SQL.txt
+[Аналитическая панель на **DataLens**](https://datalens.yandex/z01wcggxq33el) с использованием **только SQL запросов** к базе PostgreSQL. Примеры запросов в файле SQL.txt
 
 **Скриншоты**
 
