@@ -20,11 +20,11 @@ WHERE status = 'Завершена' AND tr_date BETWEEN {{interval_from}} AND {{
 GROUP BY user_id)
 
 SELECT 'Подписчики' AS tt, COUNT(*) FILTER (WHERE sub > 0 AND buy = 0) FROM t1
-UNION
+UNION ALL
 SELECT 'Покупители', COUNT(*) FILTER (WHERE buy > 0 AND sub = 0) FROM t1
-UNION
+UNION ALL
 SELECT 'Доноры', COUNT(*) FILTER (WHERE buy = 0 AND sub = 0) FROM t1
-UNION
+UNION ALL
 SELECT 'Покуп & Подпис', COUNT(*) FILTER (WHERE buy > 0 AND sub > 0) FROM t1
 
 
@@ -40,11 +40,11 @@ FROM public.simplegoods
 WHERE status = 'Завершена' AND tr_date BETWEEN {{interval_from}} AND {{interval_to}}
 GROUP BY user_id),
 t2 as (SELECT 'Подписчики' AS Роль, SUM(opsum) FILTER (WHERE sub > 0 AND buy = 0) as opsum FROM t1
-	UNION
+	UNION ALL
 	SELECT 'Покупатели', SUM(opsum) FILTER (WHERE buy > 0 AND sub = 0) FROM t1
-	UNION
+	UNION ALL
 	SELECT 'Донаторы', SUM(opsum) FILTER (WHERE buy = 0 AND sub = 0) FROM t1
-	UNION
+	UNION ALL
 	SELECT 'Покуп & Подпис', SUM(opsum) FILTER (WHERE buy > 0 AND sub > 0) FROM t1 )
 
 SELECT * FROM t2 ORDER BY opsum DESC
