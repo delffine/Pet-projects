@@ -7,3 +7,7 @@
 Также требуется сформулировать 1 или несколько основных показателей, описывающих стоимость лечения, относительно которых будет формулироваться гипотеза. 
 
 Стек: pyton, pandas, plotly, sns, T-Test, Test Mann-Whitneyu, корреляция Пирсена / Спирмана, линейная аппроксимация
+
+|      |           | 
+| ---- | --------- | 
+| ![scrin2](/test_tasks/MainsLab/mainslab1.png) | ![scrin2](/test_tasks/MainsLab/mainslab2.png) <br> ![scrin2](/test_tasks/MainsLab/mainslab4.png) | 
