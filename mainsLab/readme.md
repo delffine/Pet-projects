@@ -10,4 +10,4 @@
 
 |      |           | 
 | ---- | --------- | 
-| ![scrin2](/test_tasks/MainsLab/mainslab1.png) | ![scrin2](/test_tasks/MainsLab/mainslab2.png) <br> ![scrin2](/test_tasks/MainsLab/mainslab4.png) | 
+| ![scrin2](mainslab1.png) | ![scrin2](mainslab2.png) <br> ![scrin2](mainslab4.png) | 
