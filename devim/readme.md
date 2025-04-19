@@ -8,4 +8,4 @@
 
 |      |           | 
 | ---- | --------- | 
-| ![scrin2](/test_tasks/devim/devim1.png) | ![scrin2](/test_tasks/devim/devim2.png) | 
+| ![scrin2](devim1.png) | ![scrin2](devim2.png) | 
