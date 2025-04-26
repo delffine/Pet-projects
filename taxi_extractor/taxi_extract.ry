@@ -1,0 +1,523 @@
+import pandas as pd
+import requests
+import hashlib
+import psycopg2
+import numpy as np
+from datetime import date, timedelta
+import time
+import sys
+
+
+import urllib3
+urllib3.disable_warnings()
+
+# --------------------- Базовые процедуты работы в с базой ---------------------------
+
+
+def create_connection(db_name, db_user, db_password, db_host, db_port):
+    connection = None
+    try:
+        connection = psycopg2.connect(
+            database=db_name,
+            user=db_user,
+            password=db_password,
+            host=db_host,
+            port=db_port,
+        )
+        print("Connection to PostgreSQL DB successful")
+    except psycopg2.OperationalError as e:
+        print(f"The error '{e}' occurred")
+    return connection
+	
+def execute_query(connection, query, p=True):
+    connection.autocommit = True
+    cursor = connection.cursor()
+    try:
+        cursor.execute(query)
+        if p: print(f'Query executed successfully {query[0:20]}...')
+    except psycopg2.OperationalError as e:
+        print(f'The error {e} occurred')
+    return
+
+def execute_read_query(connection, query):
+    cursor = connection.cursor()
+    result = None
+    try:
+        cursor.execute(query)
+        result = cursor.fetchall()
+        if len(result) > 0:
+            dd = pd.DataFrame(np.array(result))
+            dd.columns = [desc[0] for desc in cursor.description]
+        else:
+            dd = pd.DataFrame([])
+        return dd
+    except psycopg2.OperationalError as e:
+        print(f"The error '{e}' occurred")
+    return 
+
+# --------------------- процедуры экспорта из API --------------------------------
+def generate_md5_hash(input_string):
+    md5_hash = hashlib.md5()
+    md5_hash.update(input_string.encode('utf-8'))
+    return md5_hash.hexdigest()
+
+
+def taxt_request(order='ping', args=''):
+    signature = generate_md5_hash(args + db_set['tseckey'])
+    r = requests.get(f"https://{db_set['tserver']}/common_api/1.0/{order}?{args}", 
+                 headers={'signature' : signature, 'Content-Type' : 'application/x-www-form-urlencode'},
+                 verify=False)
+    out = []
+    if r.status_code == 200: 
+        out = r.json()['data'] 
+    else:
+        print(r.json())
+        out=[] 
+    return out  
+
+# ------------------ процедуры предобработки данных ------------------
+
+def preprocessing_orders(df_orders):
+    df_orders['start_time'] = pd.to_datetime(df_orders['start_time'], format="%Y%m%d%H%M%S")
+    df_orders['source_time'] = pd.to_datetime(df_orders['source_time'], format="%Y%m%d%H%M%S")
+    df_orders['finish_time'] = pd.to_datetime(df_orders['finish_time'], format="%Y%m%d%H%M%S")
+    df_orders['order_date'] = df_orders['finish_time'].dt.date
+
+    #24 - aborted 4 finished 5 aborted 17 finished
+    
+    df_orders['state_id'] = df_orders['state_id'].astype('str')
+    df_orders['state_id'] = df_orders['state_id'].replace({'4' : 'Выполнен',
+                                                     '5' : 'Отменен',
+                                                     '17' : 'Выполнен',
+                                                     '24' : 'Отменен',
+                                                     '29' : 'Отменен',      
+                                                     '0' : 'Выполнен',
+                                                    })
+
+    df_orders['source'] = df_orders['source'].str.lower().\
+        str.replace('/сызрань/', 'N-ск').str.replace('/кузнецк/', 'M-ск').\
+        str.replace('пластик', 'каучук').str.replace('керамика', 'фаянс').\
+        str.replace('каскад', 'поток').str.replace('тяжмаш', 'газмяс').\
+        str.replace('криста', 'тампа').str.replace('сызрань-город', 'главный').\
+        str.replace('курумоч', 'ручей').str.replace('у кремля', 'башня').\
+        str.replace('сызрань-1', 'первый').str.replace('муранка', 'котейка').\
+        str.replace('/варламово/', 'ильинское').str.replace('троицкое', 'третье')
+
+
+    df_orders['destination'] = df_orders['destination'].str.lower().\
+        str.replace('/сызрань/', 'N-ск').str.replace('/кузнецк/', 'M-ск').\
+        str.replace('пластик', 'каучук').str.replace('керамика', 'фаянс').\
+        str.replace('каскад', 'поток').str.replace('тяжмаш', 'газмяс').\
+        str.replace('криста', 'тампа').str.replace('сызрань-город', 'главный').\
+        str.replace('курумоч', 'ручей').str.replace('у кремля', 'башня').\
+        str.replace('сызрань-1', 'первый').str.replace('муранка', 'котейка').\
+        str.replace('/варламово/', 'ильинское').str.replace('троицкое', 'третье')
+    
+    return df_orders
+
+
+def preprocessing_clients(df_clients):
+	df_clients['name'] = df_clients['client_id'].apply(lambda x: f'u_{x}')	
+	return df_clients
+	
+	
+def preprocessing_drivers(df_drivers):
+	df_drivers['name'] = df_drivers['driver_id'].apply(lambda x: f'd_{x}')
+	return df_drivers
+	
+def preprocessing_cars(df_cars):
+	df_cars['name'] = df_cars['car_id'].apply(lambda x: f'c_{x}')
+	return df_cars
+
+# --------------------- процедуры импорта в базу SQL --------------------------------
+def create_sql_table(name, data, prkey):
+    cols = dict(data.dtypes)
+    sql_st = """CREATE TABLE
+    IF NOT EXISTS """ + name + """ (
+        """
+    for c in cols:
+        dtyp = cols[c]
+        if dtyp == 'int64': cols[c] = 'INTEGER'
+        if dtyp == 'float64': cols[c] = 'REAL'        
+        if dtyp == 'datetime64[ns]': cols[c] = 'TIMESTAMP'
+        if dtyp == 'object': cols[c] = 'VARCHAR'
+        if dtyp == 'bool': cols[c] = 'VARCHAR'            
+        if c == prkey: cols[c] = 'SERIAL PRIMARY KEY'
+
+        sql_st = sql_st + c + " " + cols[c] + """, """
+    sql_st = sql_st[:-2]
+    sql_st = sql_st +  ")"
+    execute_query(connection, sql_st)
+    return
+	
+	
+def export_to_sql(table, data):
+    inrows = 1000
+    for l in range(len(data) // inrows + 1):
+    #for l in range(3):
+        insert_row = """INSERT INTO """ + table  + """ (""" + ', '.join(data.columns) + """ ) VALUES"""
+        cols = data.columns
+        tt = data.iloc[l*inrows:l*inrows + inrows]
+        for i in range(len(tt)):
+            istr = '('
+            for c in cols:
+                if tt[c].dtypes != 'int' and tt[c].dtypes != 'float64':
+                    istr += "'" + str(tt.iloc[i][c]).replace("'", "") + "', "
+                else:
+                    istr += str(tt.iloc[i][c]) + ', '
+            istr = istr[:-2]
+            istr += '), '+"\r\n"
+            insert_row += istr
+        insert_row = insert_row[:-4]
+        insert_row += ' ON CONFLICT DO NOTHING ;'
+        execute_query(connection, insert_row, False)
+        #print(f'\rЭкспорт в таблицу {table} строк с {l*inrows} по {l*inrows + len(tt)} прошeл успешно', end='', flush=True)
+    return
+
+def chek_database_state():
+    print(f'Количество заказов {execute_read_query(connection, """SELECT COUNT(tr_id) FROM taxi_orders""")["count"][0]}')
+    print(f'Минимальная дата {execute_read_query(connection, """SELECT MIN(finish_time) FROM taxi_orders""")["min"][0]}')
+    print(f'Максимальная дата {execute_read_query(connection, """SELECT MAX(finish_time) FROM taxi_orders""")["max"][0]}')
+
+    
+    print(f'Количество клиентов в заказах {execute_read_query(connection, """SELECT COUNT( DISTINCT client_id) FROM taxi_orders""")["count"][0]}')
+    print(f'Количество клиентов {execute_read_query(connection, """SELECT COUNT( DISTINCT client_id) FROM taxi_clients""")["count"][0]}')
+    print(f'Количество водителей в заказах {execute_read_query(connection, """SELECT COUNT( DISTINCT driver_id) FROM taxi_orders""")["count"][0]}')
+    print(f'Количество водителей {execute_read_query(connection, """SELECT COUNT( DISTINCT driver_id) FROM taxi_drivers""")["count"][0]}')
+    print(f'Количество машин в заказах {execute_read_query(connection, """SELECT COUNT( DISTINCT car_id) FROM taxi_orders""")["count"][0]}')
+    print(f'Количество машин {execute_read_query(connection, """SELECT COUNT( DISTINCT car_id) FROM taxi_cars""")["count"][0]}')
+	
+# ---------------- Процедуры эскпорта и импорта данных ---------------	
+def get_data_on_date(d='20250301'):
+    print(f'---------- Старт импорт данных за {d} ------')
+    start_time = d + '000001'
+    finish_time = d + '235959'
+    l_all = ''
+    day_orders = pd.json_normalize(taxt_request('get_finished_orders', 
+        'start_time=' + start_time  + '&finish_time=' + finish_time  + '&fields=state_id,client_id,driver_id,car_id,start_time,source_time,finish_time,source,destination,trip_distance,trip_time,sum,total_sum')['orders'])
+    day_orders = day_orders.rename(columns={'id':'tr_id', 'sum':'price'})
+    day_orders = preprocessing_orders(day_orders)
+    export_to_sql('taxi_orders', day_orders)
+    lno = len(day_orders)
+    l_all += f'orders - {lno} / '   
+    print(f'\rИмпорт {lno} новых заказов прошел успешно', end='')
+
+    rr = execute_read_query(connection, """SELECT 
+            DISTINCT client_id 
+            FROM taxi_orders 
+            WHERE client_id > 0 AND client_id NOT IN (
+                    SELECT DISTINCT client_id 
+                    FROM taxi_clients)
+                    """)
+    if len(rr) > 0:
+        users = rr['client_id'].to_list()
+        new_clients = pd.DataFrame([])
+        l = len(users)
+        for i in range(l):
+            user_info = pd.json_normalize(taxt_request('get_client_info', 
+                'client_id=' + str(users[i]) +
+                '&fields=client_id,parent_id,name,balance,tariff_id,is_locked'
+                ))
+            new_clients = pd.concat([new_clients, user_info], ignore_index = True)
+            print(f'\rПолучаю данные клиентов - {100 * i / l:.1f}%' + 40*' ', end='')
+
+        new_clients = new_clients.dropna()
+        lnc = len(new_clients)
+        l_all += f'clients - {lnc} / '        
+        if lnc > 0: 
+            new_clients = preprocessing_clients(new_clients)    
+            export_to_sql('taxi_clients', new_clients)
+            print(f'\rИмпорт данных {lnc} новых клиентов прошел успешно', end='')            
+        else:
+            print(f'\rНет новых данных для импорта', end='')            
+
+    
+    rr = execute_read_query(connection, """SELECT 
+                DISTINCT driver_id 
+                FROM taxi_orders 
+                WHERE driver_id > 0 AND driver_id NOT IN (
+                        SELECT DISTINCT driver_id 
+                        FROM taxi_drivers)
+                        """)
+    if len(rr) > 0:
+        vodit = rr['driver_id'].to_list()
+        new_drivers = pd.DataFrame([])
+        l = len(vodit)
+        for i in range(l):
+            driver_info = pd.json_normalize(taxt_request('get_driver_info', 
+                'driver_id=' + str(vodit[i]) +
+                '&fields=driver_id,name,balance,car_id,is_locked'
+                ))
+            new_drivers = pd.concat([new_drivers, driver_info], ignore_index = True)
+            #if i>100: break
+            print(f'\rПолучаю данные водителей - {100 * i / l:.1f}%' + 40*' ', end='')
+        new_drivers = new_drivers.dropna()
+        lnd = len(new_drivers)
+        l_all += f'drivers - {lnd} / '   
+        if lnd > 0:
+            new_drivers = preprocessing_drivers(new_drivers)        
+            export_to_sql('taxi_drivers', new_drivers)
+            print(f'\rИмпорт данных {lnd} новых водителей прошел успешно', end='')
+        else:
+            print(f'\rНет новых данных для импорта', end='')
+            
+    rr = execute_read_query(connection, """SELECT 
+                DISTINCT car_id 
+                FROM taxi_orders 
+                WHERE car_id > 0 AND car_id NOT IN (
+                        SELECT DISTINCT car_id 
+                        FROM taxi_cars)
+                        """)
+
+    if len(rr) > 0:
+        machine = rr['car_id'].to_list()
+        new_cars = pd.DataFrame([])
+        l = len(machine)
+        for i in range(l):
+            car_info = pd.json_normalize(taxt_request('get_car_info', 
+                'car_id=' + str(machine[i]) + 
+                '&fields=car_id,code,name,gos_number,color,mark'
+                ))
+            new_cars = pd.concat([new_cars, car_info], ignore_index = True)
+            print(f'\rПолучаю данные автомобилей - {100 * i / l:.1f}%' + 40*' ', end='')
+        new_cars = new_cars.dropna()
+        lnm = len(new_cars)
+        l_all += f'cars - {lnm} '   
+        if lnm > 0:
+            new_cars = preprocessing_cars(new_cars)   
+            export_to_sql('taxi_cars', new_cars)
+            print(f'\rИмпорт данных {lnm} новых машин прошел успешно', end='')
+        else:
+            print(f'\rНет новых данных для импорта', end='')            
+    print(f'\r{l_all} за {d} успешно импортированы в базу')
+    return
+	
+def update_tables():
+    #--------------------------------- Водители ------------------------------------
+    print('Обновляю таблицу водителей')
+    execute_query(connection, """ALTER TABLE taxi_drivers 
+        ADD COLUMN IF NOT EXISTS orders INTEGER,
+        ADD COLUMN IF NOT EXISTS clients INTEGER,
+        ADD COLUMN IF NOT EXISTS aborted INTEGER,
+        ADD COLUMN IF NOT EXISTS revenue REAL,
+        ADD COLUMN IF NOT EXISTS first_date DATE,
+        ADD COLUMN IF NOT EXISTS last_date DATE            
+        """, False)
+    
+    execute_query(connection, """UPDATE taxi_drivers as d
+        SET orders = o.orders,
+            clients = o.clients,
+            revenue = o.revenue,
+            aborted = o.aborted,
+            first_date = o.first_date,
+            last_date = o.last_date              
+        FROM
+          (SELECT driver_id, 
+                COALESCE(COUNT(tr_id) FILTER (WHERE state_id = 'Выполнен'), 0) as orders, 
+                COALESCE(SUM(total_sum) FILTER (WHERE state_id = 'Выполнен'), 0) as revenue, 
+                COALESCE(COUNT(DISTINCT client_id) FILTER (WHERE state_id = 'Выполнен'), 0) as clients,
+                COUNT(tr_id) FILTER (WHERE state_id = 'Отменен') as aborted,                     
+                MIN(order_date) as first_date,
+                MAX(order_date) as last_date            
+        FROM taxi_orders 
+        GROUP BY driver_id) as o
+        WHERE d.driver_id = o.driver_id
+        """, False)
+    
+       
+    #----------------------------------- Автомобили ------------------------------------  
+    print('Обновляю таблицу машин')  
+    execute_query(connection, """ALTER TABLE taxi_cars 
+            ADD COLUMN IF NOT EXISTS orders INTEGER, 
+            ADD COLUMN IF NOT EXISTS clients INTEGER,
+            ADD COLUMN IF NOT EXISTS drivers INTEGER,
+            ADD COLUMN IF NOT EXISTS revenue REAL,
+            ADD COLUMN IF NOT EXISTS first_date DATE,
+            ADD COLUMN IF NOT EXISTS last_date DATE 
+            """, False)    
+    
+    execute_query(connection, """UPDATE taxi_cars as c
+        SET orders = o.orders,
+            clients = o.clients,
+            drivers = o.drivers,
+            revenue = o.revenue,
+            first_date = o.first_date,
+            last_date = o.last_date              
+        FROM
+          (SELECT car_id, 
+                COALESCE(COUNT(tr_id), 0) as orders, 
+                COALESCE(COUNT(DISTINCT client_id), 0) as clients,         
+                COALESCE(COUNT(DISTINCT driver_id), 0) as drivers,         
+                COALESCE(SUM(total_sum), 0) as revenue,
+                MIN(order_date) as first_date,
+                MAX(order_date) as last_date            
+        FROM taxi_orders 
+        WHERE state_id = 'Выполнен'
+        GROUP BY car_id) as o
+        WHERE c.car_id = o.car_id
+        """, False)    
+    
+
+    #-------------------------------- Клиенты ------------------------------------  
+    print('Обновляю таблицу клиентов')
+        
+    execute_query(connection, """ALTER TABLE taxi_clients 
+            ADD COLUMN IF NOT EXISTS orders INTEGER, 
+            ADD COLUMN IF NOT EXISTS drivers INTEGER,
+            ADD COLUMN IF NOT EXISTS expens REAL,
+            ADD COLUMN IF NOT EXISTS aborted INTEGER,
+            ADD COLUMN IF NOT EXISTS first_date DATE,
+            ADD COLUMN IF NOT EXISTS last_date DATE            
+            """, False)
+
+    execute_query(connection, """UPDATE taxi_clients as c
+        SET orders = o.orders,
+            drivers = o.drivers,
+            expens = o.expens,
+            aborted = o.aborted,            
+            first_date = o.first_date,
+            last_date = o.last_date            
+        FROM
+          (SELECT client_id, 
+                COALESCE(COUNT(tr_id) FILTER (WHERE state_id = 'Выполнен'), 0) as orders, 
+                COALESCE(COUNT(DISTINCT driver_id)FILTER (WHERE state_id = 'Выполнен'), 0)  as drivers,         
+                COALESCE(SUM(total_sum) FILTER (WHERE state_id = 'Выполнен'), 0) as expens,
+                COUNT(tr_id) FILTER (WHERE state_id = 'Отменен') as aborted,            
+                MIN(order_date) as first_date,
+                MAX(order_date) as last_date
+        FROM taxi_orders 
+        GROUP BY client_id) as o
+        WHERE c.client_id = o.client_id
+        """, False)    
+    
+
+
+    #----------------- Таблица ежедневных показателей ----------------------------------  
+    print('Обновляю таблицу ежедневных показателей')    
+    
+    execute_query(connection, """TRUNCATE TABLE taxi_day_rep""", False)    
+    
+    execute_query(connection, """INSERT INTO taxi_day_rep 
+          (SELECT CAST(order_date AS DATE), 
+            COUNT(tr_id) FILTER (WHERE state_id = 'Выполнен') as orders, 
+            SUM(total_sum) FILTER (WHERE state_id = 'Выполнен') as revenue, 
+            COUNT(DISTINCT driver_id) FILTER (WHERE state_id = 'Выполнен') as drivers,         
+            COUNT(DISTINCT client_id) FILTER (WHERE state_id = 'Выполнен') as clients,         
+            COUNT(DISTINCT car_id) FILTER (WHERE state_id = 'Выполнен') as cars,
+            COUNT(tr_id) FILTER (WHERE state_id = 'Отменен') as aborted,
+            SUM(trip_distance) FILTER (WHERE state_id = 'Выполнен') as trip_dist, 
+            SUM(trip_time) FILTER (WHERE state_id = 'Выполнен') as trop_time_sum,
+            0,
+            0,
+            0
+        FROM taxi_orders 
+        GROUP BY order_date
+        ORDER BY order_date DESC)
+        """, False) 
+
+
+    execute_query(connection, """UPDATE taxi_day_rep as dr
+        SET new_clients = c.new_clients
+        FROM
+          (SELECT first_date, 
+                COALESCE(COUNT(client_id), 0) as new_clients
+            FROM taxi_clients
+            GROUP BY first_date) as c
+        WHERE dr.order_date = c.first_date
+        """, False)
+    
+    execute_query(connection, """UPDATE taxi_day_rep as dr
+        SET new_drivers = d.new_drivers
+        FROM
+          (SELECT first_date, 
+                COALESCE(COUNT(driver_id), 0) as new_drivers
+            FROM taxi_drivers
+            GROUP BY first_date) as d
+        WHERE dr.order_date = d.first_date
+        """, False)
+    
+
+    execute_query(connection, """UPDATE taxi_day_rep as dr
+        SET new_cars = d.new_cars
+        FROM
+          (SELECT first_date, 
+                COALESCE(COUNT(car_id), 0) as new_cars
+            FROM taxi_cars
+            GROUP BY first_date) as d
+        WHERE dr.order_date = d.first_date
+        """, False)
+        
+        
+    print('ФСЕ!')
+
+    return
+
+	
+# --------------------- основное тело скрипта -----------------------
+if __name__ == "__main__":
+	path = ''
+	db_set = dict()
+	file = open(path + "db_connect.txt")
+	for line in file:
+		k, v = line.strip().split('=')
+		db_set[k] = v
+	file.close()
+
+
+	largs = len(sys.argv)
+	if largs > 1:
+
+		#загрузка данных на дату
+		if sys.argv[1] == 'ondate':
+			connection = create_connection(db_set['dbname'], db_set['uname'], db_set['pass'], db_set['server'], db_set['port'])
+			if largs > 3:
+				stardate = pd.to_datetime(sys.argv[2])
+				finishdate = pd.to_datetime(sys.argv[3])
+				update_dates = pd.date_range(stardate, finishdate).strftime('%Y%m%d').tolist()
+				print(f'on period {update_dates[0]} - {update_dates[-1]}')
+				for d in update_dates:
+					get_data_on_date(d)
+					time.sleep(10)
+				print('ФСЕ!')
+			elif largs > 2:
+				print(f'on date {sys.argv[2]}')
+				get_data_on_date(sys.argv[2])
+				
+			else:
+				print('НЕ заданы даты')
+			chek_database_state()
+			connection.close()
+
+		#обновление аггрегаций и витрин
+		if sys.argv[1] == 'update':
+			connection = create_connection(db_set['dbname'], db_set['uname'], db_set['pass'], db_set['server'], db_set['port'])
+			update_tables()
+			print('Начало таблицы')
+			print(execute_read_query(connection, """SELECT * FROM taxi_day_rep LIMIT 5"""))
+			print('Конец таблицы')
+			print(execute_read_query(connection, """SELECT * FROM taxi_day_rep ORDER BY order_date ASC LIMIT 5"""))
+			connection.close()
+			
+			
+		#выводит общую статистику по таблицам
+		if sys.argv[1] == 'check':
+			connection = create_connection(db_set['dbname'], db_set['uname'], db_set['pass'], db_set['server'], db_set['port'])
+			chek_database_state()
+			connection.close()
+			
+		#лекарство от зависших ссессий
+		if sys.argv[1] == 'reset':
+			connection = create_connection(db_set['dbname'], db_set['uname'], db_set['pass'], db_set['server'], db_set['port'])
+			connection.rollback()
+			connection.autocommit = True	
+			connection.close()
+			print('Ресект произведен')
+			
+	else:
+		print("""Параметры запуска: 
+			ondate YYYYMMDD - для загрузки данных на дату
+			ondate YYYYMMDD YYYYMMDD - для загрузки данных с даты по дату		
+			update - для обновления витрин
+			check - выводит общую статистику по таблицам
+			reset - лекарство от зависших ссессий
+		""")
