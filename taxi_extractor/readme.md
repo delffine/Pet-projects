@@ -14,7 +14,8 @@
 
 **Скриншоты**
 
-| Экстрактор | Дашборд   | Excel    |
+| Экстрактор | Основные показатели  | Экономика    |
 | -- | --- | --- |
-| ![img](taxi0.jpg) |![img](taxi1.jpg) |![img](taxi2.jpg) | 
- 
+| ![img](taxi0.jpg) |![img](taxi3.jpg) |![img](taxi2.jpg) | 
+| Клиенты  | Заказы   | Excel    |
+| ![img](taxi1.jpg) |![img](taxi4.jpg) |![img](taxi5.jpg) | 
