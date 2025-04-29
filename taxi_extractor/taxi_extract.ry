@@ -174,7 +174,7 @@ def export_to_sql(table, data):
         #print(f'\rЭкспорт в таблицу {table} строк с {l*inrows} по {l*inrows + len(tt)} прошeл успешно', end='', flush=True)
     return
 
-def chek_database_state():
+def cheсk_database_state():
     print(f'Количество заказов {execute_read_query(connection, """SELECT COUNT(tr_id) FROM taxi_orders""")["count"][0]}')
     print(f'Минимальная дата {execute_read_query(connection, """SELECT MIN(finish_time) FROM taxi_orders""")["min"][0]}')
     print(f'Максимальная дата {execute_read_query(connection, """SELECT MAX(finish_time) FROM taxi_orders""")["max"][0]}')
@@ -186,6 +186,19 @@ def chek_database_state():
     print(f'Количество водителей {execute_read_query(connection, """SELECT COUNT( DISTINCT driver_id) FROM taxi_drivers""")["count"][0]}')
     print(f'Количество машин в заказах {execute_read_query(connection, """SELECT COUNT( DISTINCT car_id) FROM taxi_orders""")["count"][0]}')
     print(f'Количество машин {execute_read_query(connection, """SELECT COUNT( DISTINCT car_id) FROM taxi_cars""")["count"][0]}')
+    print(f'Витрина по дням')
+    print(execute_read_query(connection, """SELECT COUNT(order_date) as days, 
+        SUM(orders) as orders,
+        SUM(aborted) as aborted,		
+        SUM(trip_dist)::INTEGER as distance,		
+        SUM(revenue)::INTEGER as revenue,
+        AVG(drivers)::INTEGER as dr_day,
+        AVG(clients)::INTEGER as cl_day,
+        AVG(cars)::INTEGER as cr_day
+        FROM taxi_day_rep
+        """))
+
+    return
 	
 # ---------------- Процедуры эскпорта и импорта данных ---------------	
 def get_data_on_date(d='20250301'):
@@ -292,6 +305,7 @@ def get_data_on_date(d='20250301'):
     print(f'\r{l_all} за {d} успешно импортированы в базу')
     return
 	
+
 def update_tables():
     #--------------------------------- Водители ------------------------------------
     print('Обновляю таблицу водителей')
@@ -301,7 +315,8 @@ def update_tables():
         ADD COLUMN IF NOT EXISTS aborted INTEGER,
         ADD COLUMN IF NOT EXISTS revenue REAL,
         ADD COLUMN IF NOT EXISTS first_date DATE,
-        ADD COLUMN IF NOT EXISTS last_date DATE            
+        ADD COLUMN IF NOT EXISTS last_date DATE,
+        ADD COLUMN IF NOT EXISTS work_days INTEGER        
         """, False)
     
     execute_query(connection, """UPDATE taxi_drivers as d
@@ -310,15 +325,17 @@ def update_tables():
             revenue = o.revenue,
             aborted = o.aborted,
             first_date = o.first_date,
-            last_date = o.last_date              
+            last_date = o.last_date,
+            work_days = o.work_days               
         FROM
           (SELECT driver_id, 
-                COALESCE(COUNT(tr_id) FILTER (WHERE state_id = 'Выполнен'), 0) as orders, 
+                COUNT(tr_id) FILTER (WHERE state_id = 'Выполнен') as orders, 
                 COALESCE(SUM(total_sum) FILTER (WHERE state_id = 'Выполнен'), 0) as revenue, 
-                COALESCE(COUNT(DISTINCT client_id) FILTER (WHERE state_id = 'Выполнен'), 0) as clients,
+                COUNT(DISTINCT client_id) FILTER (WHERE state_id = 'Выполнен') as clients,
                 COUNT(tr_id) FILTER (WHERE state_id = 'Отменен') as aborted,                     
                 MIN(order_date) as first_date,
-                MAX(order_date) as last_date            
+                MAX(order_date) as last_date,
+                COUNT(DISTINCT order_date) FILTER (WHERE state_id = 'Выполнен') as work_days
         FROM taxi_orders 
         GROUP BY driver_id) as o
         WHERE d.driver_id = o.driver_id
@@ -333,7 +350,9 @@ def update_tables():
             ADD COLUMN IF NOT EXISTS drivers INTEGER,
             ADD COLUMN IF NOT EXISTS revenue REAL,
             ADD COLUMN IF NOT EXISTS first_date DATE,
-            ADD COLUMN IF NOT EXISTS last_date DATE 
+            ADD COLUMN IF NOT EXISTS last_date DATE, 
+            ADD COLUMN IF NOT EXISTS work_days INTEGER, 
+            ADD COLUMN IF NOT EXISTS mileage REAL 
             """, False)    
     
     execute_query(connection, """UPDATE taxi_cars as c
@@ -342,15 +361,19 @@ def update_tables():
             drivers = o.drivers,
             revenue = o.revenue,
             first_date = o.first_date,
-            last_date = o.last_date              
+            last_date = o.last_date,
+            work_days = o.work_days,
+            mileage = o.mileage  
         FROM
           (SELECT car_id, 
-                COALESCE(COUNT(tr_id), 0) as orders, 
-                COALESCE(COUNT(DISTINCT client_id), 0) as clients,         
-                COALESCE(COUNT(DISTINCT driver_id), 0) as drivers,         
+                COUNT(tr_id) as orders, 
+                COUNT(DISTINCT client_id) as clients,         
+                COUNT(DISTINCT driver_id) as drivers,         
                 COALESCE(SUM(total_sum), 0) as revenue,
                 MIN(order_date) as first_date,
-                MAX(order_date) as last_date            
+                MAX(order_date) as last_date,
+                COUNT(DISTINCT order_date) FILTER (WHERE state_id = 'Выполнен') as work_days,
+                SUM(trip_distance) FILTER (WHERE state_id = 'Выполнен') as mileage
         FROM taxi_orders 
         WHERE state_id = 'Выполнен'
         GROUP BY car_id) as o
@@ -379,8 +402,8 @@ def update_tables():
             last_date = o.last_date            
         FROM
           (SELECT client_id, 
-                COALESCE(COUNT(tr_id) FILTER (WHERE state_id = 'Выполнен'), 0) as orders, 
-                COALESCE(COUNT(DISTINCT driver_id)FILTER (WHERE state_id = 'Выполнен'), 0)  as drivers,         
+                COUNT(tr_id) FILTER (WHERE state_id = 'Выполнен') as orders, 
+                COUNT(DISTINCT driver_id)FILTER (WHERE state_id = 'Выполнен')  as drivers,         
                 COALESCE(SUM(total_sum) FILTER (WHERE state_id = 'Выполнен'), 0) as expens,
                 COUNT(tr_id) FILTER (WHERE state_id = 'Отменен') as aborted,            
                 MIN(order_date) as first_date,
@@ -448,10 +471,34 @@ def update_tables():
         """, False)
         
         
-    print('ФСЕ!')
+    print(' --- ФСЕ! --- ')
 
     return
+	
 
+
+def save_data_to_files():
+    print('Получаю данные из SQL')
+    orders = execute_read_query(connection, """SELECT * FROM taxi_orders""")
+    clients = execute_read_query(connection, """SELECT * FROM taxi_clients""")
+    drivers = execute_read_query(connection, """SELECT * FROM taxi_drivers""")
+    cars = execute_read_query(connection, """SELECT * FROM taxi_cars""")
+
+    print('Записываю данные в CVS')
+    orders.to_csv(path + 'orders.csv')
+    clients.to_csv(path + 'clients.csv')
+    drivers.to_csv(path + 'drivers.csv')
+    cars.to_csv(path + 'cars.csv')
+        
+    print('Записываю данные в XLSX')
+    
+    with pd.ExcelWriter(path + 'taxi.xlsx', engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
+        orders.to_excel(writer, sheet_name='orders', index=False)
+        clients.to_excel(writer, sheet_name='clients', index=False)
+        drivers.to_excel(writer, sheet_name='drivers', index=False)
+        cars.to_excel(writer, sheet_name='cars', index=False)
+    print('ФСЕ!')
+	
 	
 # --------------------- основное тело скрипта -----------------------
 if __name__ == "__main__":
@@ -493,16 +540,22 @@ if __name__ == "__main__":
 			connection = create_connection(db_set['dbname'], db_set['uname'], db_set['pass'], db_set['server'], db_set['port'])
 			update_tables()
 			print('Начало таблицы')
-			print(execute_read_query(connection, """SELECT * FROM taxi_day_rep LIMIT 5"""))
+			print(execute_read_query(connection, """SELECT * FROM taxi_day_rep ORDER BY order_date DESC LIMIT 5"""))
 			print('Конец таблицы')
 			print(execute_read_query(connection, """SELECT * FROM taxi_day_rep ORDER BY order_date ASC LIMIT 5"""))
 			connection.close()
 			
+		#Запись данных в Excel
+		if sys.argv[1] == 'toexcel':
+			connection = create_connection(db_set['dbname'], db_set['uname'], db_set['pass'], db_set['server'], db_set['port'])
+			save_data_to_files()
+			connection.close()
+
 			
 		#выводит общую статистику по таблицам
 		if sys.argv[1] == 'check':
 			connection = create_connection(db_set['dbname'], db_set['uname'], db_set['pass'], db_set['server'], db_set['port'])
-			chek_database_state()
+			cheсk_database_state()
 			connection.close()
 			
 		#лекарство от зависших ссессий
@@ -511,13 +564,14 @@ if __name__ == "__main__":
 			connection.rollback()
 			connection.autocommit = True	
 			connection.close()
-			print('Ресект произведен')
+			print('Ресет произведен')
 			
 	else:
 		print("""Параметры запуска: 
-			ondate YYYYMMDD - для загрузки данных на дату
-			ondate YYYYMMDD YYYYMMDD - для загрузки данных с даты по дату		
-			update - для обновления витрин
-			check - выводит общую статистику по таблицам
+			ondate YYYYMMDD - для загрузки данных в базу на дату
+			ondate YYYYMMDD YYYYMMDD - для загрузки данных в базу с даты по дату		
+			update - для обновления витрин в базе
+			toexcel - выгрузка данных из базу в excel файл			
+			check - выводит общую статистику по таблицам базы
 			reset - лекарство от зависших ссессий
 		""")
